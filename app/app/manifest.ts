@@ -6,8 +6,8 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "ReZolv",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#1d4ed8",
+    background_color: "#f1f7f6",
+    theme_color: "#0f6b5e",
     icons: [],
   };
 }

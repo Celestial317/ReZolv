@@ -1,6 +1,6 @@
 # ReZolv — Build Plan (HackCBS 9 prototype)
 
-**One line:** Students report campus problems by voice in any language. AI agents merge them into issues, find the root cause, keep sensitive reports sealed until enough students agree, and track every promise the administration makes until students confirm the fix.
+**One line:** Students report campus problems by voice in any language. AI agents merge them into issues, find the root cause, protect sensitive reports (every one reaches a human, and the student chooses how visible they are), and track every promise the administration makes until students confirm the fix.
 
 **Mascot:** Campus Mitraa, a cheerful, supportive student buddy in a royal-blue hoodie who guides students through every report and reacts to what happens to it.
 
@@ -18,9 +18,9 @@
 **Student app** (Next.js `/app`, installable on Android as a PWA)
 1. Log in (email + password, seeded accounts)
 2. Home (open reports, "needs your OK" card, nearby issues)
-3. Report: record voice or type → pin the place on an OpenStreetMap map → choose normal or sensitive → send
+3. Report: record voice or type → pin the place on an OpenStreetMap map → choose normal or sensitive (sensitive expands into 3 handling choices, see section 2a) → send
 4. Receipt (receipt code)
-5. My reports + tracking (timeline, promise countdown, "Why?")
+5. My reports + tracking (timeline, promise countdown, "Why?", anonymous chat thread with the confidential officer on sensitive reports)
 6. Nearby issues with "Me too"
 7. Confirm the fix (yes / partly / no)
 8. Profile (pseudonym, log out)
@@ -29,7 +29,7 @@
 1. Log in (role from account: dean, warden, dept head, committee)
 2. Overview (tiles, top issues, root-cause alert, map)
 3. Issues list + Issue detail (reports by pseudonym, timeline, "Why?" trace, set promise)
-4. Safe Voice (sealed counts only)
+4. Safe Voice: an inbox for the confidential officer (urgent first, then "talk now", then "waiting, due in X days"). The dean and other staff see counts only.
 5. Promises board (overdue, due soon, waiting for students, kept)
 6. Scorecard (promises kept per department)
 7. Campus map
@@ -38,7 +38,7 @@
 
 **Backend**
 - Report pipeline: transcribe → classify → embed → cluster → route → trace to Meko
-- Sealed release at N distinct reporters
+- Safe Voice handling (3 paths, urgent override, 7-day review, pattern detection, anonymous chat), see section 2a
 - Escalation loop for overdue promises
 - Fix confirmation → resolve → save a playbook to Meko
 
@@ -64,7 +64,8 @@ OTP / SSO, push notifications, sign-up, rights chatbot, multi-campus, IoT sensor
 | Log in (app + dashboard) | happy / cheerful, waving | "Hi! I'm Campus Mitraa. Bol do, main hoon na." |
 | Home | happy | "Tell Mitraa in any language." |
 | Recording a voice note | listening | "Mitraa is listening…" |
-| Sensitive report option | sympathetic | "Thank you for trusting me. Your name stays safe." |
+| Sensitive report option | sympathetic | "Thank you for trusting me. How do you want me to handle this?" |
+| Urgent sensitive report | concerned | "I have told the officer right now. If you are in danger, call campus security." |
 | Receipt | cheerful + confetti | "You joined 31 others…" |
 | Tracking, escalated | determined | "Deadline missed, so I pushed it to the Dean." |
 | Confirm fix → yes / partly / no | proud / concerned / determined | |
@@ -73,13 +74,42 @@ OTP / SSO, push notifications, sign-up, rights chatbot, multi-campus, IoT sensor
 
 **Rule for the demo:** she reacts, she doesn't block. Never a pop-up you have to close.
 
+## 2a. Safe Voice: sealed means protected, not ignored
+
+A pure "wait for 5" rule would ignore the rarest and often most serious case: one student harassed by one person. So we separate two questions:
+- **Who acts on the report?** The confidential officer, immediately, for every report.
+- **When do details reach the wider administration?** That is what the threshold controls, because in a small class one detailed report can identify who filed it.
+
+When a student marks a report sensitive, Mitraa asks: *"How do you want me to handle this?"*
+
+| Option | What happens | Identity |
+|---|---|---|
+| **1. Talk to someone now** (default) | Goes immediately to one trained confidential officer (a counsellor or one committee member), not the dean's dashboard. They can reply through the app. | Pseudonym only |
+| **2. Wait for others** | Stays protected until enough students report a similar pattern (threshold, default 5), then goes to the full committee as a group concern. | Pseudonym, lost among a group |
+| **3. Share my name with the committee** | For students who want a formal complaint. | Visible to the committee only, never on staff dashboards |
+
+**Safety nets so nothing gets buried**
+- **Urgent reports skip the wait.** If Gemini flags danger (threats, assault, self-harm), the report goes to the confidential officer at once and the app shows a **"Call campus security"** button. AI only escalates here. It never downgrades or closes a report.
+- **A deadline even when waiting.** If option 2 has not reached the threshold in 7 days, the officer still reviews a summary with identifying details removed. Every report gets a human within a week.
+- **Two-way anonymous chat.** The officer can ask "Did this happen more than once?" without learning who the student is. This is what makes a single report actionable.
+- **Patterns are spotted automatically.** When a 2nd or 3rd student reports something similar, the officer sees "this is now 3 separate students".
+
+**Pitch line:** "You are never ignored. You choose how visible you are. And when others report the same thing, your voice gets stronger."
+
+**Changes this needs (to be applied in `data_model.md` and `architecture.md`)**
+- `issues`: add `handling` (`now` / `wait` / `named`), `urgent` (bool), `reviewed_at`, `officer_id`.
+- New table `safe_messages` (issue_id, from_role, text, created_at) for the anonymous chat.
+- Student app: the "Sensitive" option expands into the 3 choices; the tracking screen gets a chat thread with the officer.
+- Dashboard: Safe Voice becomes the officer inbox described in section 1.
+- Backend: urgent flag from the intake agent, 7-day review job in the escalation loop, pattern count shown to the officer, chat endpoints.
+
 ## 3. Demo script (4 minutes)
 
 1. **Student phone:** Campus Mitraa waves on log in. Record a Hindi voice note (she switches to *listening*) "no water on 2nd floor", pin Hostel B, send → receipt.
 2. **Dashboard:** the report has already joined RZV-209 (31 reports). Open it → "Why?" shows Intake → Clusterer → Router with reasoning (from Meko).
 3. **Root cause:** the alert says "Hostel B water outages follow power cuts". Show the link.
 4. **Promise:** RZV-209's promise is 3 days late → already escalated to the Dean. Set a new promise live.
-5. **Safe Voice:** RZV-217 sealed at 4 of 5. Submit one more sensitive report from the phone → it releases to the committee, no names.
+5. **Safe Voice:** Submit one urgent sensitive report from the phone → it reaches the confidential officer instantly, and the student sees "Call campus security". Then RZV-217 sits at 4 of 5 "wait for others" reports. Submit one more → the 5th report turns 5 individual voices into one case for the full committee, no names.
 6. **Close the loop:** on the phone, confirm RZV-219 is fixed → issue resolves → a playbook is saved to Meko → a new similar issue shows "suggested fix" instantly.
 7. **Scorecard:** Estates 58% kept vs IT 92%.
 
@@ -117,7 +147,7 @@ Shared contract: the API list in `architecture.md` §5. Agree on JSON shapes in 
 **Checkpoint (hour 8):** a voice note from the phone shows up as a merged issue on the dashboard.
 
 ### Hours 8–14 · The novel parts
-- [ ] B: router with Meko `memory_search`; root-cause agent → `issue_links`; sealed release logic
+- [ ] B: router with Meko `memory_search`; root-cause agent → `issue_links`; Safe Voice handling logic (urgent override, 7-day review, pattern count, chat)
 - [ ] A: promises endpoints; escalation loop; confirm endpoint; resolve → `memory_add` playbook
 - [ ] C: my reports, tracking with "Why?", nearby + me too, confirm fix
 - [ ] D: promises board, Safe Voice, "Why?" trace panel, map
@@ -165,7 +195,9 @@ Shared contract: the API list in `architecture.md` §5. Agree on JSON shapes in 
 ## 8. Definition of done
 
 - [ ] Phone → voice report → appears on the dashboard, merged, routed, with a "Why?" trace
-- [ ] Sealed report releases at the threshold with no identity anywhere in staff views
+- [ ] Every sensitive report reaches the confidential officer (immediately, or within 7 days with details removed); urgent ones instantly
+- [ ] "Wait for others" reports release to the full committee at the threshold with no identity anywhere in staff views
+- [ ] Officer and student can chat without the officer learning who the student is
 - [ ] Overdue promise escalates automatically
 - [ ] Student confirmation resolves an issue and a playbook appears in Meko
 - [ ] Runs on Vultr via `docker compose up`
