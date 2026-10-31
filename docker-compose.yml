@@ -1,0 +1,29 @@
+services:
+  yugabytedb:
+    image: yugabytedb/yugabyte:latest   # pin a version tag before the demo
+    command: ["bin/yugabyted", "start", "--background=false"]
+    ports: ["5433:5433", "15433:15433"]
+    volumes: ["ybdata:/root/var"]
+
+  server:
+    build: ./server
+    env_file: .env
+    depends_on: [yugabytedb]
+    ports: ["8000:8000"]
+
+  app:
+    build:
+      context: ./app
+      args: { API_URL: "http://server:8000" }
+    depends_on: [server]
+    ports: ["3000:3000"]
+
+  dashboard:
+    build:
+      context: ./dashboard
+      args: { API_URL: "http://server:8000" }
+    depends_on: [server]
+    ports: ["3001:3001"]
+
+volumes:
+  ybdata:
