@@ -2,8 +2,9 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-import CampusMap, { buildingAt } from "@/components/CampusMap";
-import { Back, Camera, Check, Close, Play, Send, Mic } from "@/components/Icons";
+import CampusMap from "@/components/CampusMap";
+import { placePos } from "@/lib/campus";
+import { Back, Camera, Check, Close, Mic, Pin, Play, Send } from "@/components/Icons";
 import Mitraa from "@/components/Mitraa";
 
 const FLOORS = ["Ground", "1st", "2nd", "3rd"];
@@ -132,12 +133,12 @@ function Wizard() {
         {step === 2 && (
           <div style={{ margin: "0 -18px" }}>
             <div style={{ position: "relative" }}>
-              <CampusMap mode="pin" center={[155, 385]} zoom={1.5} aspect={1} onCenter={(_, b) => setPlace(b)} />
-              <div className="card" style={{ position: "absolute", top: 14, left: 14, right: 14, display: "flex", gap: 14, alignItems: "center", padding: "12px 14px", boxShadow: "0 8px 24px rgba(20,35,42,.12)" }}>
-                <span className="tile-icon" style={{ width: 52, height: 52, background: "var(--mint)", color: "var(--green)" }}><span style={{ display: "grid" }}>⌂</span></span>
+              <CampusMap mode="pin" center={placePos("Hostel B")} zoom={19.5} aspect={1} onCenter={(_, b) => setPlace(b)} />
+              <div className="card" style={{ position: "absolute", zIndex: 1100, top: 14, left: 14, right: 14, display: "flex", gap: 14, alignItems: "center", padding: "12px 14px", boxShadow: "0 8px 24px rgba(20,35,42,.12)" }}>
+                <span className="tile-icon" style={{ width: 52, height: 52, background: "var(--mint)", color: "var(--green)" }}><Pin size={26} /></span>
                 <div>
                   <div className="mono muted" style={{ fontSize: 14, letterSpacing: ".08em" }}>PIN IS ON</div>
-                  <b style={{ fontSize: 22 }}>{place ? `${place} · ${floor} floor` : "Open ground"}</b>
+                  <b style={{ fontSize: 22 }}>{place ? `${place} · ${floor} floor` : "On campus"}</b>
                 </div>
               </div>
             </div>
@@ -176,7 +177,7 @@ function Wizard() {
                 </div>
               </div>
               {[
-                ["Place", place ? `${place} · ${floor} floor` : "Open ground"],
+                ["Place", place ? `${place} · ${floor} floor` : "On campus"],
                 ["Category", "Water"],
                 ["Photo", photo ? "1 attached" : "None"],
                 ...(joined && place === "Hostel B" && !sensitive ? [["Joins issue", "31 others · RZV-209"]] : []),

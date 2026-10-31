@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import CampusMap, { type Marker } from "@/components/CampusMap";
+import { CAMPUS_CENTER, nudge } from "@/lib/campus";
 import { categories, issues } from "@/lib/mock";
 
 const tone = (s: string): Marker["tone"] =>
@@ -17,11 +18,11 @@ export default function Campus() {
     () => issues.filter((i) => i.state !== "sealed" && i.state !== "fixed" && (cat === "All" || i.category === cat.toLowerCase())),
     [cat],
   );
-  const markers: Marker[] = list.map((i) => ({ id: i.code, at: i.at, tone: tone(i.state), size: i.count > 40 ? 15 : 11 }));
+  const markers: Marker[] = list.map((i) => ({ id: i.code, at: i.at, tone: tone(i.state), count: i.count }));
 
   return (
     <div style={{ margin: "-20px -18px 0" }}>
-      <CampusMap markers={markers} aspect={0.86} center={[330, 300]} zoom={1.05} onMarker={setOpen} />
+      <CampusMap markers={markers} aspect={0.86} center={nudge(CAMPUS_CENTER, 0, 14)} zoom={18} activeId={open} onMarker={setOpen} />
 
       <section
         style={{

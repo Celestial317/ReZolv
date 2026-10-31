@@ -208,15 +208,20 @@ textarea.input { height: 160px; padding: 14px 16px; resize: none; }
 .tl-item p { color: var(--muted); font-size: 16px; margin: 2px 0 4px; }
 .tl-item .when { font-family: var(--mono); font-size: 14px; color: var(--muted); }
 
-/* ---- map ---- */
-.map { position: relative; overflow: hidden; background: #f0ede6; touch-action: none; user-select: none; }
-.map svg { display: block; width: 100%; height: 100%; }
-.map .ctl { position: absolute; right: 16px; display: flex; flex-direction: column; gap: 10px; }
+/* ---- map (Leaflet + OpenStreetMap) ---- */
+.map { position: relative; overflow: hidden; background: #e8eeec; }
+.map .leaflet-container { font-family: var(--font); }
+.map .ctl { position: absolute; right: 14px; display: flex; flex-direction: column; gap: 8px; z-index: 1000; }
 .map .ctl button {
-  width: 52px; height: 52px; border-radius: 16px; background: #fff; border: 1px solid var(--line);
-  display: grid; place-items: center; font-size: 28px; font-weight: 800; box-shadow: 0 4px 12px rgba(20, 35, 42, 0.1);
+  width: 44px; height: 44px; border-radius: 14px; background: #fff; border: 1px solid var(--line);
+  display: grid; place-items: center; font-size: 24px; font-weight: 700; line-height: 1; box-shadow: 0 3px 10px rgba(20, 35, 42, 0.12);
 }
-.map .attr { position: absolute; left: 12px; bottom: 12px; background: rgba(255, 255, 255, 0.9); padding: 6px 12px; border-radius: 10px; font-size: 14px; color: #5a4b3e; }
+.map .leaflet-control-attribution { font-size: 11px; border-radius: 8px 0 0 0; background: rgba(255, 255, 255, 0.85); }
+.pin { background: none; border: 0; }
+.pin span {
+  display: grid; place-items: center; border-radius: 50%; border: 3px solid #fff; color: #fff;
+  font-weight: 800; font-size: 13px; font-family: var(--font); box-shadow: 0 2px 8px rgba(20, 35, 42, 0.35);
+}
 
 /* ---- recorder ---- */
 .rec { background: var(--ink); border-radius: 28px; padding: 26px 18px 22px; text-align: center; color: #fff; }

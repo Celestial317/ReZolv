@@ -76,7 +76,7 @@ export default function IssuePage({ params }: { params: Promise<{ code: string }
       )}
 
       <div style={{ margin: "16px -18px 0", position: "relative" }}>
-        <CampusMap center={[issue.at[0], issue.at[1] - 20]} zoom={1.3} aspect={0.7} controls={false} markers={[{ id: issue.code, at: issue.at, tone: late ? "red" : "blue", size: 13 }]} />
+        <CampusMap center={issue.at} zoom={19} aspect={0.7} controls={false} markers={[{ id: issue.code, at: issue.at, tone: late ? "red" : "blue", count: issue.count }]} />
         <div className="card" style={{ position: "absolute", left: 18, bottom: 40, padding: "10px 14px" }}>
           <div className="mono muted" style={{ fontSize: 13, letterSpacing: ".08em" }}>REPORTED AT</div>
           <b style={{ fontSize: 18 }}>{issue.place}</b>

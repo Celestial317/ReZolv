@@ -1,5 +1,6 @@
 // Static demo data for the UI. Replace with calls to the API once the screens are signed off.
 import type { Mood } from "@/components/Mitraa";
+import { CAMPUS_CENTER, nudge, placePos, type LatLng } from "./campus";
 
 export type IssueState = "open" | "promised" | "overdue" | "escalated" | "check" | "fixed" | "sealed";
 export type Tone = "red" | "amber" | "green" | "blue" | "grey";
@@ -19,8 +20,8 @@ export type Issue = {
   mine: boolean;
   /** which steps of Sent / Routed / Promised / Fixed are done */
   progress: number;
-  /** position on the campus map (world units, see CampusMap) */
-  at: [number, number];
+  /** where the pin sits on the campus map */
+  at: LatLng;
   promise?: { by: string; text: string; late?: string; level?: 0 | 1 | 2 };
   rootCause?: string;
   timeline?: TimelineItem[];
@@ -32,7 +33,7 @@ export const me = { pseudonym: "Student #4F2A", short: "4F2A", reports: 9, fixed
 export const issues: Issue[] = [
   {
     code: "RZV-214", title: "WiFi down in Hostel C", category: "internet", place: "Hostel C", dept: "IT Services",
-    count: 47, state: "promised", note: "Promised by 6 PM today", mine: false, progress: 3, at: [365, 392],
+    count: 47, state: "promised", note: "Promised by 6 PM today", mine: false, progress: 3, at: placePos("Hostel C"),
     promise: { by: "IT Services", text: "Access-point switch will be replaced by 6 PM today." },
     timeline: [
       { title: "IT Services promised a fix", text: "Replace the faulty access-point switch.", when: "Today, 9:40 AM", tone: "blue" },
@@ -45,7 +46,7 @@ export const issues: Issue[] = [
   },
   {
     code: "RZV-209", title: "No water on 2nd floor", category: "water", place: "Hostel B", dept: "Estates",
-    count: 31, state: "escalated", note: "3 days late · with the Dean", mine: true, progress: 3, at: [155, 375],
+    count: 31, state: "escalated", note: "3 days late · with the Dean", mine: true, progress: 3, at: placePos("Hostel B"),
     promise: { by: "Estates", text: "Pump wiring will be fixed by Wednesday.", late: "3d 4h", level: 1 },
     rootCause: "The water stops after every power cut, because the pump has no backup. A fix that worked in Hostel A has been sent to Estates.",
     timeline: [
@@ -64,21 +65,21 @@ export const issues: Issue[] = [
   },
   {
     code: "RZV-221", title: "Mess food hygiene", category: "food", place: "Mess", dept: "Mess Committee",
-    count: 22, state: "promised", note: "Cleaning by Monday", mine: false, progress: 3, at: [570, 322],
+    count: 22, state: "promised", note: "Cleaning by Monday", mine: false, progress: 3, at: placePos("Mess"),
     promise: { by: "Mess Committee", text: "Deep cleaning of the kitchen by Monday." },
     timeline: [{ title: "Mess Committee promised a fix", text: "Deep cleaning of the kitchen by Monday.", when: "Yesterday", tone: "blue" }],
     why: [{ title: "Sent to Mess Committee", text: "Food issues go to the Mess Committee.", when: "Router", tone: "grey" }],
   },
   {
     code: "RZV-226", title: "Street lights out", category: "safety", place: "Sports road", dept: "Electrical",
-    count: 12, state: "overdue", note: "1 day late · with the Warden", mine: false, progress: 3, at: [624, 286],
+    count: 12, state: "overdue", note: "1 day late · with the Warden", mine: false, progress: 3, at: placePos("Sports Ground"),
     promise: { by: "Electrical", text: "Lamps replaced by Thursday.", late: "1d 2h", level: 1 },
     timeline: [{ title: "Escalated to the Warden", text: "Electrical did not update after the deadline.", when: "Today, 8:00 AM", tone: "red" }],
     why: [{ title: "Pushed to the Warden", text: "The promise was overdue.", when: "Promise keeper", tone: "red" }],
   },
   {
     code: "RZV-219", title: "Geyser not heating", category: "water", place: "Hostel C", dept: "Electrical",
-    count: 8, state: "check", note: "Marked fixed on Friday. Is it?", mine: true, progress: 4, at: [330, 372],
+    count: 8, state: "check", note: "Marked fixed on Friday. Is it?", mine: true, progress: 4, at: nudge(placePos("Hostel C"), 4, 22),
     promise: { by: "Electrical", text: "Geyser element will be replaced." },
     timeline: [
       { title: "Electrical marked it fixed", text: "Waiting for students to confirm.", when: "Fri 30 Oct", tone: "amber" },
@@ -88,19 +89,19 @@ export const issues: Issue[] = [
   },
   {
     code: "RZV-198", title: "Broken tap in Lab Block", category: "water", place: "Lab Block", dept: "Estates",
-    count: 3, state: "fixed", note: "Fixed, you confirmed", mine: true, progress: 4, at: [150, 215],
+    count: 3, state: "fixed", note: "Fixed, you confirmed", mine: true, progress: 4, at: placePos("Lab Block"),
     timeline: [{ title: "Fixed, because you spoke up", text: "3 of 3 students confirmed.", when: "Mon 19 Oct", tone: "green" }],
     why: [],
   },
   {
     code: "RZV-190", title: "Library fan not working", category: "electricity", place: "Library", dept: "Electrical",
-    count: 5, state: "fixed", note: "Fixed, you confirmed", mine: true, progress: 4, at: [545, 100],
+    count: 5, state: "fixed", note: "Fixed, you confirmed", mine: true, progress: 4, at: placePos("Library"),
     timeline: [{ title: "Fixed, because you spoke up", text: "4 of 5 students confirmed.", when: "Thu 8 Oct", tone: "green" }],
     why: [],
   },
   {
     code: "RZV-217", title: "Sealed report", category: "safety", place: "Hidden", dept: "Welfare Committee",
-    count: 4, state: "sealed", note: "Waiting for 1 more student", mine: true, progress: 1, at: [0, 0],
+    count: 4, state: "sealed", note: "Waiting for 1 more student", mine: true, progress: 1, at: CAMPUS_CENTER,
     timeline: [{ title: "Sealed", text: "Nobody reads it until enough other students report the same thing.", when: "Wed 28 Oct", tone: "grey" }],
     why: [],
   },

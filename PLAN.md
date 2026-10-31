@@ -103,6 +103,36 @@ When a student marks a report sensitive, Mitraa asks: *"How do you want me to ha
 - Dashboard: Safe Voice becomes the officer inbox described in section 1.
 - Backend: urgent flag from the intake agent, 7-day review job in the escalation loop, pattern count shown to the officer, chat endpoints.
 
+## 2b. AI that can prove itself
+
+**Decision: no Qdrant.** YugabyteDB already does vector search (`ybhnsw`) and Meko already has hybrid search and a knowledge base. A second vector database adds setup risk and weakens the YugabyteDB track story: their judges want to see their stack doing the AI work. "One database for relational, vector and time-series data" is itself a pitch point.
+
+**Pitch:** *"Three layers of AI, each one checks the next. Statistics find patterns. LLMs explain them. A verifier checks every explanation against the database before a human sees it. All on YugabyteDB, with shared agent memory in Meko."*
+
+### Tier 1: build these (about 5 hours in total)
+
+| # | Feature | How it works | Cost |
+|---|---|---|---|
+| 1 | **Verified "Why?"** | Every agent decision must cite evidence IDs (report IDs, event IDs, the Meko memory ID). A verifier agent (one Gemini call plus SQL lookups on the cited IDs) checks each claim before it is shown. A claim with no backing data is shown as *"unverified"*, never invented. Line: "Our agents can't make things up about a student's complaint." | ~1.5 h |
+| 2 | **Content-anonymity check** | Before a sensitive report is sent, a Gemini structured-output call (risk score, risky spans, suggested rewrite) plus simple patterns for room and roll numbers flags text that could identify the student ("I'm the only girl in CSE-B", "room 214"). Mitraa says: *"This line could identify you. Want me to make it vaguer?"* This protects against the content giving the student away, not just the account. | ~1 h |
+| 3 | **Root causes by statistics, explained by AI** | A SQL time-lag test first: does stream A (power cuts) come before stream B (water complaints) within 48 hours, compared with a shuffled baseline? Only patterns that pass go to Gemini, which explains them in plain language. Line: "6 of 6 water outages followed a power cut within 48 hours, against a 9% chance rate. The AI didn't guess it, it measured it." | ~1.5 h |
+| 4 | **Router that learns from corrections** | When staff reassign an issue, the Router saves the correction to Meko (`memory_add`). The next similar issue is routed correctly (`memory_search` before routing). The dashboard shows routing accuracy over time. | ~1 h |
+
+Build order: **1, then 2, then 3**, then 4 if time allows. (1) is the biggest trust win, (2) fixes the Safe Voice weakness and gives Mitraa a strong moment, (3) makes the root-cause demo defensible.
+
+### Tier 2: one-liners if time allows
+- **Urgency from tone of voice:** Gemini audio understanding picks up emotion in speech. Use it only to raise priority, never to lower it.
+- **Coordinated fake reports:** many near-identical reports from new accounts in a short burst are flagged for review. Answers "can't people abuse anonymity?"
+- **Answers grounded in college rules:** upload the rulebook to Meko's knowledge base; escalation messages cite the rule (found with `knowledgebase_search`). This is our RAG, without Qdrant.
+- **Hinglish handled directly:** embed both the original text and the English translation and combine them, so code-mixed text clusters correctly.
+
+### Tier 3: pitch only
+- Rank playbooks by success rate from students' "Fixed?" answers.
+- A campus graph (buildings, equipment, issues, causes) queried with relational, vector and time data in one SQL query.
+
+### Honesty rule: measured numbers only
+Show only numbers computed from our own seeded data: cluster accuracy, routing accuracy and lag-test results. Build a **20-report test set with known answers** so we can say "92% correct on our test set" truthfully, never a general accuracy claim. The lag-test numbers on the Root causes screen must come from a real query over the seed data.
+
 ## 3. Demo script (4 minutes)
 
 1. **Student phone:** Campus Mitraa waves on log in. Record a Hindi voice note (she switches to *listening*) "no water on 2nd floor", pin Hostel B, send → receipt.
@@ -147,7 +177,7 @@ Shared contract: the API list in `architecture.md` §5. Agree on JSON shapes in 
 **Checkpoint (hour 8):** a voice note from the phone shows up as a merged issue on the dashboard.
 
 ### Hours 8–14 · The novel parts
-- [ ] B: router with Meko `memory_search`; root-cause agent → `issue_links`; Safe Voice handling logic (urgent override, 7-day review, pattern count, chat)
+- [ ] B: router with Meko `memory_search` and reassign-correction memory; root-cause agent = SQL time-lag test first, Gemini explanation second → `issue_links`; verifier agent that checks every "Why?" claim against cited IDs; Safe Voice handling logic (urgent override, 7-day review, pattern count, chat)
 - [ ] A: promises endpoints; escalation loop; confirm endpoint; resolve → `memory_add` playbook
 - [ ] C: my reports, tracking with "Why?", nearby + me too, confirm fix
 - [ ] D: promises board, Safe Voice, "Why?" trace panel, map
@@ -162,6 +192,8 @@ Shared contract: the API list in `architecture.md` §5. Agree on JSON shapes in 
 
 ### Hours 18–22 · Optional + hardening
 - [ ] Solana memo anchoring (only if everything above is green)
+- [ ] Content-anonymity check on the sensitive report step (section 2b)
+- [ ] 20-report test set with known answers; compute cluster and routing accuracy from it
 - [ ] Fallbacks ready (see §6); rehearse the demo 3 times
 
 ### Hours 22–24 · Pitch
@@ -201,4 +233,7 @@ Shared contract: the API list in `architecture.md` §5. Agree on JSON shapes in 
 - [ ] Overdue promise escalates automatically
 - [ ] Student confirmation resolves an issue and a playbook appears in Meko
 - [ ] Runs on Vultr via `docker compose up`
+- [ ] Every "Why?" claim is either backed by a cited record or shown as "unverified"
+- [ ] The root-cause alert shows a measured lag-test result from the seed data
+- [ ] Every accuracy number shown comes from the 20-report test set
 - [ ] Every sponsor tech in `architecture.md` §12 is actually called in the demo
