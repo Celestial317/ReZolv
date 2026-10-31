@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import CampusMap, { focusOn } from "@/components/CampusMap";
+import CampusMap from "@/components/CampusMap";
 import { IconArrowRight, IconMic, IconPhoto } from "@/components/Icons";
 import Mitraa from "@/components/Mitraa";
 import { AgentBadge, Pill } from "@/components/ui";
@@ -221,7 +221,7 @@ export default function IssueDetailView({ detail }: { detail: IssueDetail }) {
           {pin && (
             <div className="card" style={{ overflow: "hidden" }}>
               <CampusMap pins={[pin]} height={190} legend={false} selected={pin.building}
-                initialView={focusOn(pin.building)} />
+                focus={pin.building} scrollZoom={false} compact />
             </div>
           )}
         </aside>

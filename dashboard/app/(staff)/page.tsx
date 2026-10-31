@@ -115,7 +115,7 @@ export default function OverviewPage() {
             </div>
             <div style={{ flex: 1, minHeight: 360 }}>
               <CampusMap pins={MAP_PINS} defaultMode="heat" height={460} legend={false}
-                initialView={{ k: 1.35, x: -230, y: -110 }}
+                scrollZoom={false}
                 onSelect={(_, pin) => pin && pin.id.startsWith("RZV") && pin.status !== "sealed" && router.push(`/issues/${pin.id}`)} />
             </div>
           </section>
