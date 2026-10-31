@@ -8,7 +8,8 @@ Run it AFTER setting GEMINI_API_KEY: issue embeddings come from the same model
 the live clusterer uses, otherwise new reports will not match the seeded issues.
 
 Demo logins (password for all: rezolv123):
-  students  student01@campus.demo .. student50@campus.demo
+  phone     ananya.s@democampus.edu   (Student #4F2A, the app's default login)
+  students  student02@campus.demo .. student50@campus.demo
   staff     dean@rezolv.demo  warden@rezolv.demo  it@rezolv.demo
             estates@rezolv.demo  committee@rezolv.demo
 """
@@ -34,7 +35,7 @@ def ago(days=0, hours=0) -> datetime:
 
 def receipt() -> str:
     n = next(_receipt)
-    return f"RZV-R-{n // 256:04X}-{rng.randrange(65536):04X}"
+    return f"RZV-R-{n:04X}-{rng.randrange(65536):04X}"
 
 
 DEPARTMENTS = {
@@ -46,13 +47,15 @@ DEPARTMENTS = {
     "Student Welfare Committee": ["sensitive"],
 }
 
-# name: (lat, lng)  fictional campus layout
+# name: (lat, lng). Shaheed Sukhdev College of Business Studies, Rohini, Delhi.
+# Same spots as mobileApp/lib/campus.ts (the demo labels are pinned on the real building and grounds).
 LOCATIONS = {
-    "Hostel A": (28.7052, 77.1021), "Hostel B": (28.7058, 77.1034), "Hostel C": (28.7064, 77.1047),
-    "Girls Hostel": (28.7071, 77.1018), "Library": (28.7045, 77.1040), "Main Mess": (28.7055, 77.1042),
-    "Admin Block": (28.7040, 77.1030), "Academic Block 1": (28.7036, 77.1044),
-    "Academic Block 2": (28.7033, 77.1052), "Sports Complex": (28.7078, 77.1038),
-    "Main Gate": (28.7028, 77.1026), "Canteen": (28.7048, 77.1055),
+    "Main Gate": (28.732195, 77.118893), "Hostel A": (28.733147, 77.118783),
+    "Hostel B": (28.732783, 77.118477), "Hostel C": (28.732516, 77.118881),
+    "Girls Hostel": (28.732633, 77.118587), "Library": (28.732804, 77.119199),
+    "Admin Block": (28.733114, 77.118722), "Lab Block": (28.733018, 77.119003),
+    "Academic Block 1": (28.732708, 77.119064), "Mess": (28.732441, 77.119309),
+    "Canteen": (28.732387, 77.118661), "Sports Ground": (28.732259, 77.119456),
 }
 
 STAFF = [  # email, role, name, department
@@ -87,10 +90,12 @@ def seed_people() -> tuple[dict, dict, dict, list]:
             (email, pw, role, name, depts[dept] if dept else None))["id"]
     students = []
     for i in range(1, N_STUDENTS + 1):
+        # student #1 is the demo phone user: matches the app's login screen and profile ("Student #4F2A")
+        email = "ananya.s@democampus.edu" if i == 1 else f"student{i:02d}@campus.demo"
         uid = db.fetchone("INSERT INTO users (email, password_hash, role) VALUES (%s,%s,'student') RETURNING id",
-                          (f"student{i:02d}@campus.demo", pw))["id"]
-        pseudo = f"Student #{rng.randrange(16**4):04X}"
-        while any(s == pseudo for s in students):
+                          (email, pw))["id"]
+        pseudo = "Student #4F2A"
+        while i > 1 and (pseudo in students or pseudo == "Student #4F2A"):
             pseudo = f"Student #{rng.randrange(16**4):04X}"
         db.execute("INSERT INTO student_profiles (user_id, pseudonym) VALUES (%s,%s)", (uid, pseudo))
         students.append(pseudo)
@@ -99,7 +104,7 @@ def seed_people() -> tuple[dict, dict, dict, list]:
 
 def make_issue(*, code, title, category, loc, dept, status, created, locs, depts, students,
                n_reports, texts, sensitive=False, threshold=5, resolved=None, embed_text=None,
-               suggested_fix=None) -> dict:
+               suggested_fix=None, first=0) -> dict:
     emb = db.vec(gemini.embed(embed_text or title))
     issue = db.fetchone(
         """INSERT INTO issues (code, title, category, location_id, department_id, status, is_sensitive,
@@ -116,10 +121,10 @@ def make_issue(*, code, title, category, loc, dept, status, created, locs, depts
             """INSERT INTO reports (issue_id, pseudonym, kind, text_original, text_en, lang, category, severity,
                                     is_sensitive, location_id, lat, lng, embedding, receipt_code, created_at)
                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector,%s,%s)""",
-            (issue["id"], students[i % len(students)], "report" if first_few else "me_too",
+            (issue["id"], students[(first + i) % len(students)], "report" if first_few else "me_too",
              texts[i][0] if first_few else None, texts[i][1] if first_few else None,
              texts[i][2] if first_few else None, category, 3, sensitive, locs[loc],
-             lat + rng.uniform(-0.0002, 0.0002), lng + rng.uniform(-0.0002, 0.0002),
+             lat + rng.uniform(-0.00005, 0.00005), lng + rng.uniform(-0.00005, 0.00005),
              emb if first_few else None, receipt(),
              created + timedelta(minutes=rng.randint(0, 60 * 24 * 2) if i else 0)),
         )
@@ -163,7 +168,7 @@ def main() -> None:
     for n, d in enumerate((28, 23, 17, 12, 7, 3), start=1):
         c = make_issue(code=f"RZV-20{n}", title="Power cut in Hostel B", category="electricity", loc="Hostel B",
                        dept="Estates · Electrical", status="resolved", created=ago(d), resolved=ago(d) + timedelta(hours=7),
-                       n_reports=rng.randint(4, 9), texts=[("Bijli chali gayi hai", "Power has gone out", "hi")],
+                       n_reports=rng.randint(4, 9), first=rng.randrange(10, 40), texts=[("Bijli chali gayi hai", "Power has gone out", "hi")],
                        embed_text="Power cut in Hostel B, electricity is out", **k)
         event(c, "created", "clusterer", f"Created {c['code']}: Power cut in Hostel B", "Seeded history.", ago(d), [])
         promise(c, "Estates · Electrical", estates, "Restore power and check the transformer",
@@ -179,7 +184,7 @@ def main() -> None:
             loc = list(LOCATIONS)[i % 12]
             iss = make_issue(code=f"RZV-1{0 if cat == 'internet' else 5}{i:02d}", title=title.format(n=i + 1),
                              category=cat, loc=loc, dept=dept, status="resolved", created=ago(60 + i * 3),
-                             resolved=ago(55 + i * 3), n_reports=1, texts=[("past issue", "past issue", "en")], **k)
+                             resolved=ago(55 + i * 3), n_reports=1, first=rng.randrange(2, 50), texts=[("past issue", "past issue", "en")], **k)
             promise(iss, dept, estates if cat == "water" else it_head, "Fix the fault", ago(58 + i * 3),
                     "kept" if i < kept else "broken", created=ago(60 + i * 3), closed=ago(55 + i * 3), depts=depts)
 
@@ -238,11 +243,11 @@ def main() -> None:
     promise(i219, "Estates · Electrical", estates, "Replace faulty tube lights", ago(1), created=ago(5), depts=depts)
     event(i219, "promise_made", "Estates · Electrical", "Estates · Electrical promised: Replace faulty tube lights", None, ago(5), log)
     event(i219, "fixed", "Estates · Electrical", "Estates · Electrical says it is fixed, waiting for students to confirm", None, ago(1), log)
-    for pseudo in students[:3]:
+    for pseudo in students[1:4]:
         db.execute("INSERT INTO confirmations (issue_id, pseudonym, answer) VALUES (%s,%s,'yes')", (i219["id"], pseudo))
 
     # --- RZV-221: mess hygiene ---
-    i221 = make_issue(code="RZV-221", title="Hygiene problems in the main mess", category="food", loc="Main Mess",
+    i221 = make_issue(code="RZV-221", title="Hygiene problems in the main mess", category="food", loc="Mess",
                       dept="Mess & Catering", status="open", created=ago(2), n_reports=12,
                       texts=[("Mess mein safai ki bahut samasya hai", "The mess has serious hygiene problems", "hi"),
                              ("Found insects in the dal today", "Found insects in the dal today", "en")],

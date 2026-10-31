@@ -14,6 +14,7 @@ def run_once() -> int:
                   EXTRACT(EPOCH FROM (now() - p.due_at)) / 3600 AS hours_late, i.code
            FROM promises p JOIN issues i ON i.id = p.issue_id
            WHERE p.status = 'open' AND p.escalation_level < 2
+             AND i.status IN ('open', 'in_progress')
              AND p.due_at < now() - (p.escalation_level * INTERVAL '24 hours')"""
     )
     for r in rows:

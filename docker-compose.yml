@@ -8,6 +8,8 @@ services:
   server:
     build: ./server
     env_file: .env
+    environment:
+      DATABASE_URL: postgresql://yugabyte:yugabyte@yugabytedb:5433/yugabyte
     depends_on: [yugabytedb]
     ports: ["8000:8000"]
 
