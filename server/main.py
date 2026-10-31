@@ -58,6 +58,7 @@ def health():
     return {
         "db": True,
         "gemini": gemini.enabled(),
+        "gemini_usage": gemini.stats() if gemini.enabled() else None,
         "meko": meko.enabled(),
         "storage": storage.enabled(),
         "solana": solana_anchor.enabled(),

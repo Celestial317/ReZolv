@@ -38,9 +38,12 @@ Campus: Shaheed Sukhdev College of Business Studies, Rohini (12 spots, same coor
 ## Keys (all in `../.env`, all optional to start)
 | Key | Needed for | Without it |
 |---|---|---|
-| `GEMINI_API_KEY` | Voice transcription, translation, classification, real embeddings | Typed reports only, keyword classification, mock embeddings |
+| `GEMINI_API_KEY` (model `gemini-3.5-flash-lite`) | Voice transcription, translation, classification, real embeddings | Typed reports only, keyword classification, mock embeddings |
 | `VULTR_S3_ACCESS_KEY`, `VULTR_S3_SECRET_KEY` (+ `VULTR_S3_ENDPOINT`) | Voice and photo uploads | `/uploads/presign` returns 503 |
-| `MEKO_API_KEY`, `MEKO_DATAPACK_ID` | Agent traces, playbooks, routing memory | Traces stay in the `issue_events` table, which the UI already uses |
+| `MEKO_API_KEY`, `MEKO_DATAPACK_ID` (the datapack's UUID) | Agent traces, playbooks, routing memory | Traces stay in the `issue_events` table, which the UI already uses |
 | `SOLANA_KEYPAIR_PATH` | Anchoring hashes on devnet (optional) | Hashes only recorded in the `anchors` table |
 
 After adding the Gemini key, run `python seed.py --reset` again so the seeded issues use the same embedding model as live reports.
+
+## Gemini rate limits
+A new report costs 2 calls (one to analyse, one to embed); "me too", merged duplicates, seeding and repeated text cost none because results are cached (`.cache/embeddings.json`). Text and voice calls are spaced to `GEMINI_RPM` per minute, embeddings to `GEMINI_EMBED_RPM`. A 429 backs off and retries, repeated 429s pause that call type for a minute, and after `GEMINI_DAILY_BUDGET` calls the server falls back to keyword classification. The root-cause and suggested-fix agents only call Gemini when SQL or Meko finds something worth explaining. `GET /health` shows today's call count.

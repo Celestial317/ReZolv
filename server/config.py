@@ -9,8 +9,12 @@ class Settings(BaseSettings):
     jwt_hours: int = 72
 
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.5-flash-lite"
     gemini_embed_model: str = "gemini-embedding-001"
+    # Keep these low: the key is shared and a rate-limit stops the whole demo.
+    gemini_rpm: int = 12            # text + audio calls per minute
+    gemini_embed_rpm: int = 60
+    gemini_daily_budget: int = 1000  # after this many calls today, use the offline fallbacks
 
     vultr_s3_endpoint: str = "https://del1.vultrobjects.com"
     vultr_s3_access_key: str = ""

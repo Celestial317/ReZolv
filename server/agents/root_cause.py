@@ -14,7 +14,13 @@ def run(issue_id) -> None:
            ORDER BY created_at""",
         (issue["location_id"],),
     )
-    if len(recent) < 2:
+    # Cheap SQL gate first: an LLM call is only worth it if some other kind of issue happened
+    # in the same building shortly before this one.
+    me = next((r for r in recent if r["id"] == issue["id"]), None)
+    if not me or not any(
+        r["category"] != me["category"] and 0 < (me["created_at"] - r["created_at"]).total_seconds() <= 72 * 3600
+        for r in recent
+    ):
         return
     lines = "\n".join(
         f"- {r['code']} | {r['created_at']:%Y-%m-%d %H:%M} | {r['category']} | {r['status']} | {r['title']}"

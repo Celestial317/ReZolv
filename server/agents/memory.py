@@ -14,7 +14,11 @@ def suggest(issue_id) -> None:
     found = meko.memory_search("memory", f"{issue['category']} {issue['title']} at {issue['location']}")
     if not found:
         return
-    fix = gemini.generate_text(
+    found = " ".join(found.split())
+    if len(found) <= 280:  # short enough to show as is: skip the LLM call
+        fix = found
+    else:
+      fix = gemini.generate_text(
         f"New campus issue: {issue['title']} ({issue['category']}, {issue['location']}).\n"
         f"Memory search result:\n{found}\n\n"
         "If the memory describes a fix that applies to this kind of issue, reply with one short "
