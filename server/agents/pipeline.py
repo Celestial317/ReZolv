@@ -38,7 +38,7 @@ def _log_tokens(issue_id, tokens: int) -> None:
 
 def _process(report_id):
     report = db.fetchone(
-        """SELECT id, voice_key, text_original, is_sensitive, location_id, handling
+        """SELECT id, voice_key, text_original, is_sensitive, location_id, handling, asset_id
            FROM reports WHERE id=%s""",
         (report_id,),
     )

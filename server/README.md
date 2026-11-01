@@ -85,3 +85,10 @@ A student who answers "Still broken" on an issue awaiting confirmation, after th
 
 ## Voice and photos
 `POST /uploads/media?kind=voice|photo` takes the raw file. It goes to the Vultr bucket when `VULTR_S3_*` is set, otherwise to `server/media/`. Audio is converted with the system ffmpeg or the bundled `imageio-ffmpeg`.
+
+## Equipment with QR stickers
+Students register an object (photo, type, name, map pin, floor); staff approve it; an approved item gets a printable QR label; scanning the sticker opens the report screen with the item and place filled in.
+- Student: `GET /assets/types`, `GET /assets`, `POST /assets/check` (same type within 8 m on the same floor), `POST /assets/suggest-type` (Gemini looks at the photo), `POST /assets`, `GET /assets/by-code/{code}`, `GET /assets/{id}/photo`. Upload the photo with `POST /uploads/media?kind=asset`. `POST /reports` accepts `asset_code`.
+- Staff: `GET /admin/assets?status=proposed`, `GET /admin/assets/{id}` (history: complaints, fixes, average hours to fix), `POST /admin/assets/{id}/approve`, `POST /admin/assets/{id}/reject`, `GET /admin/assets/{id}/qr.svg`, `GET /admin/assets/{id}/label.pdf` (both only for approved items).
+- The QR holds `rezolv://a/RZV-A-014` (`QR_LINK_PREFIX`). Reports on the same item with the same kind of problem merge into one issue (`issues.asset_id`).
+- Photos go to a third bucket, `rezolv-assets`, or to `server/media/assets/` when no object storage is configured.

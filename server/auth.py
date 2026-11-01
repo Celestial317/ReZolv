@@ -6,6 +6,7 @@ import jwt
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+import db
 from config import settings
 
 STAFF_ROLES = ("dean", "warden", "dept_head", "committee", "officer")
@@ -36,9 +37,13 @@ def current_user(creds: Annotated[HTTPAuthorizationCredentials | None, Depends(_
     if creds is None:
         raise HTTPException(401, "Missing token")
     try:
-        return jwt.decode(creds.credentials, settings.jwt_secret, algorithms=["HS256"])
+        claims = jwt.decode(creds.credentials, settings.jwt_secret, algorithms=["HS256"])
     except jwt.PyJWTError:
         raise HTTPException(401, "Invalid or expired token")
+    # A re-seeded database deletes the users a still-valid token points to.
+    if not db.fetchone("SELECT 1 AS x FROM users WHERE id = %s", (claims["sub"],)):
+        raise HTTPException(401, "Account no longer exists, please log in again")
+    return claims
 
 
 def student(user: Annotated[dict, Depends(current_user)]) -> dict:

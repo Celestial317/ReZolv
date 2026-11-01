@@ -44,6 +44,14 @@ export async function api<T = unknown>(path: string, init: { method?: string; bo
   return data as T;
 }
 
+/** Fetches a protected file (QR image, PDF label) and returns an object URL for it. */
+export async function fetchBlobUrl(path: string): Promise<string> {
+  const token = localStorage.getItem(TOKEN);
+  const res = await fetch(`/api${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {} });
+  if (!res.ok) throw new ApiError(res.status, `Request failed (${res.status})`);
+  return URL.createObjectURL(await res.blob());
+}
+
 export async function signIn(email: string, password: string): Promise<Staff> {
   const out = await api<{ token: string; role: string; name: string }>("/auth/login", { method: "POST", body: { email, password } });
   if (!["dept_head", "warden", "dean"].includes(out.role)) throw new ApiError(403, "This account is not a staff account");

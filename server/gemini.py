@@ -433,3 +433,38 @@ def generate_structured(prompt: str, schema):
     if out is not None:
         _structured_cache[key] = out
     return out
+
+
+class AssetGuess(BaseModel):
+    type: str
+    confidence: float
+
+
+_asset_cache: dict[str, AssetGuess | None] = {}
+
+
+def suggest_asset_type(image: bytes, mime: str, options: list[str]) -> AssetGuess | None:
+    """Which kind of equipment is in the photo? One call per distinct photo, cached."""
+    key = hashlib.sha1(image).hexdigest()
+    if key in _asset_cache:
+        return _asset_cache[key]
+    from google.genai import types
+
+    def go():
+        resp = _gc().models.generate_content(
+            model=settings.gemini_model,
+            contents=[
+                "This is a photo of a piece of equipment on a college campus. Pick the single best match from: "
+                + ", ".join(options) + ". Use 'other' if none fits. Return type and a confidence from 0 to 1.",
+                types.Part.from_bytes(data=image, mime_type=mime),
+            ],
+            config=types.GenerateContentConfig(response_mime_type="application/json", response_schema=AssetGuess),
+        )
+        _count(resp)
+        return AssetGuess.model_validate_json(resp.text)
+
+    out = _call("text", go)
+    if out is not None and out.type not in options:
+        out = AssetGuess(type="other", confidence=0.0)
+    _asset_cache[key] = out
+    return out

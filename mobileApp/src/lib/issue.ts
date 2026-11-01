@@ -25,5 +25,11 @@ export function stateBadge(status: string | null, level: number | null): { label
 export const progressOf = (status: string | null) =>
   status === "resolved" || status === "awaiting_confirm" ? 4 : status === "in_progress" ? 3 : 2;
 
+/** A sticker holds rezolv://a/RZV-A-014 (or just the code). */
+export function assetCodeFrom(data: string): string | null {
+  const m = data.trim().match(/(?:^|\/)(RZV-A-\d+)$/i);
+  return m ? m[1].toUpperCase() : null;
+}
+
 export const CATEGORIES = ["water", "internet", "electricity", "food", "safety", "other"] as const;
 export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

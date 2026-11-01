@@ -11,6 +11,7 @@ const NAV = [
   { href: "/issues", label: "Issues" },
   { href: "/escalations", label: "Escalations", queue: true },
   { href: "/promises", label: "Promises" },
+  { href: "/equipment", label: "Equipment", pending: true },
   { href: "/map", label: "Campus map" },
   { href: "/root-causes", label: "Root causes" },
   { href: "/scorecard", label: "Scorecard" },
@@ -23,12 +24,14 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const [user, setUser] = useState<Staff | null>(null);
   const [queue, setQueue] = useState<number | null>(null);
+  const [pending, setPending] = useState<number | null>(null);
 
   useEffect(() => {
     const s = session();
     if (!s) { router.replace("/login"); return; }
     setUser(s);
     api<{ issues: unknown[] }>("/admin/escalations").then((r) => setQueue(r.issues.length)).catch(() => {});
+    api<unknown[]>("/admin/assets?status=proposed").then((r) => setPending(r.length)).catch(() => {});
   }, [router, path]);
 
   if (!user) return null;
@@ -48,6 +51,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
               <Link key={n.href} href={n.href} className={on ? "on" : ""}>
                 {n.label}
                 {n.queue && queue ? <span className="count alert">{queue}</span> : null}
+                {n.pending && pending ? <span className="count alert">{pending}</span> : null}
               </Link>
             );
           })}

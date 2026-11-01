@@ -94,6 +94,16 @@ Say: "That quote is not written by us. It comes from the college's own Code of C
 
 Say: "A promise starts with the department, moves to the Warden at its deadline, and to the Dean 24 hours later, or immediately when a student disputes the fix after the deadline. Nobody has to chase it."
 
+### Step 6b: Equipment with a QR sticker, built live (phone + dashboard) , 2 minutes
+This is the closing moment. The college has no map of its own taps and coolers, so the students build it.
+1. Phone: Home, **Equipment**, **Add equipment**. Take a photo of a real object in the room (a water bottle, a fan, a router). Mitraa's server suggests the type from the photo. Confirm it, type a name such as **"Cooler near the library entrance"**, tap **Next, pin the place**, drag the pin, choose the floor, **Send for approval**. If a similar item is within 8 m on the same floor, the app warns first.
+2. Dashboard (Facilities Head): the sidebar **Equipment** shows a count. Open it: the proposal is under **Waiting for approval** with its photo. Click **Approve**.
+3. Open the item: the **QR label** appears. Click **Open printable label (PDF)** to show the sticker with Mitraa, the name and the code (for example RZV-A-001).
+4. Put the QR on the projector. A judge opens the app, **Equipment**, **Scan a sticker**, and scans it. The screen shows the photo and **"Is this the one in front of you?"**. They tap **Yes, report a problem**, speak, and send. The place and the item are already filled in, there is no map step.
+5. Dashboard: open the item again. Its history shows the new complaint. A second report on the same item merges into the same issue.
+
+Say: "The sticker holds only a short code, never who scans it. Only approved items get a QR. The photo on the scan screen protects against a swapped sticker. Every item builds a history of complaints and time to fix."
+
 ### Step 7: Fix the cause, close them all (dashboard) , 30 seconds
 1. Dean window: **Root causes**, **Fix the cause, close them all**, **Confirm**.
 2. Phone: the linked water issue appears under **Needs your OK**.
@@ -142,6 +152,7 @@ Say: "We only show numbers we measured. This is our own 20-report test set, not 
 | Voice does not record | Allow the microphone in Android settings, or tap **Type** and enter the same sentence. |
 | Map is blank | The phone needs internet for the map tiles. Everything else still works. |
 | Report stays on "Finding who can fix this" | Gemini is rate limited. Wait 30 seconds. The report is saved and will appear. |
+| Judge's phone cannot scan | Use the in-app **Scan a sticker** (the system camera may not open a `rezolv://` link). They need the app installed. |
 | Data looks wrong after rehearsal | `cd server`, `.venv\Scripts\python seed.py --reset --no-meko` |
 | Dashboard shows a blank page | Restart `npm run dev` in `dashboard`. |
 

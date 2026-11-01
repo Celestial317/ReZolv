@@ -127,6 +127,35 @@ CREATE TABLE IF NOT EXISTS anchors (
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ---------- Equipment (students register objects, staff approve, a QR sticker opens the report screen) ----------
+CREATE SEQUENCE IF NOT EXISTS asset_code_seq START 1;
+
+CREATE TABLE IF NOT EXISTS assets (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code               TEXT NOT NULL UNIQUE,
+  name               TEXT NOT NULL,
+  type               TEXT NOT NULL,
+  photo_key          TEXT,
+  location_id        UUID REFERENCES locations(id),
+  floor              TEXT,
+  lat                DOUBLE PRECISION NOT NULL,
+  lng                DOUBLE PRECISION NOT NULL,
+  status             TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed','approved','retired')),
+  created_by_pseudonym TEXT,
+  approved_by        UUID REFERENCES users(id),
+  approved_at        TIMESTAMPTZ,
+  note               TEXT,
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS assets_status_idx ON assets (status, created_at);
+
+ALTER TABLE issues ADD COLUMN IF NOT EXISTS asset_id UUID REFERENCES assets(id);
+
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS asset_id UUID REFERENCES assets(id);
+
+CREATE INDEX IF NOT EXISTS issues_asset_idx ON issues (asset_id);
+
 -- ---------- Safe Voice (sensitive reports) ----------
 -- handling: now = confidential officer at once, wait = protected until a pattern or 7 days, named = committee, with name
 ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;

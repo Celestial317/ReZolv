@@ -57,6 +57,14 @@ export default function Home() {
         </View>
       </Card>
 
+      <Pressable onPress={() => router.push("/assets")} style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 22, backgroundColor: "#e3ecff", borderWidth: 1, borderColor: "#c9d9fb" }}>
+        <View style={{ flex: 1 }}>
+          <Txt w="heavy" size={20} c="#1d4ed8">Equipment</Txt>
+          <Txt size={16} c="#1d3a8a">Scan a sticker to report an item, or add one that has no sticker.</Txt>
+        </View>
+        <ChevronIcon color="#1d4ed8" />
+      </Pressable>
+
       {failed && <ErrorBox message={failed} retry={() => { me.reload(); awaiting.reload(); mine.reload(); near.reload(); }} />}
       {!failed && me.loading && !me.data && <Loading />}
 

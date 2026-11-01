@@ -76,7 +76,7 @@ N_STUDENTS = 50
 
 def wipe() -> None:
     db.execute(
-        "TRUNCATE anchors, safe_messages, routing_corrections, campus_calendar, issue_links, issue_events, "
+        "TRUNCATE assets, anchors, safe_messages, routing_corrections, campus_calendar, issue_links, issue_events, "
         "confirmations, promises, reports, issues, locations, student_profiles, users, departments CASCADE"
     )
     db.execute("ALTER SEQUENCE issue_code_seq RESTART WITH 300")
@@ -108,16 +108,16 @@ def seed_people() -> tuple[dict, dict, dict, list]:
 
 def make_issue(*, code, title, category, loc, dept, status, created, locs, depts, students,
                n_reports, texts, sensitive=False, threshold=5, resolved=None, embed_text=None,
-               suggested_fix=None, first=0, handling=None, officer=None, urgent=False) -> dict:
+               suggested_fix=None, first=0, handling=None, officer=None, urgent=False, asset=None) -> dict:
     emb = db.vec(gemini.embed(embed_text or title))
     issue = db.fetchone(
         """INSERT INTO issues (code, title, category, location_id, department_id, status, is_sensitive,
                                release_threshold, report_count, impact_score, embedding, suggested_fix,
-                               created_at, resolved_at, handling, officer_id, urgent)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector,%s,%s,%s,%s,%s,%s) RETURNING id, code""",
+                               created_at, resolved_at, handling, officer_id, urgent, asset_id)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::vector,%s,%s,%s,%s,%s,%s,%s) RETURNING id, code""",
         (code, title, category, locs[loc], depts[dept] if dept else None, status, sensitive, threshold,
          n_reports, min(100, n_reports * 3 + 3 * 8), emb, suggested_fix, created, resolved, handling,
-         officer, urgent),
+         officer, urgent, asset),
     )
     lat, lng = LOCATIONS[loc]
     for i in range(n_reports):

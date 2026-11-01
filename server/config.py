@@ -32,6 +32,8 @@ class Settings(BaseSettings):
 
     cluster_max_distance: float = 0.20
     public_app_url: str = "http://localhost:3000"   # base of the links printed on QR stickers
+    qr_link_prefix: str = "rezolv://a/"             # what an equipment QR sticker holds; the app opens it
+    bucket_assets: str = "rezolv-assets"
     campus_security_phone: str = "112"              # shown on the "Call campus security" button
     safe_review_days: int = 7                       # a waiting Safe Voice report reaches the officer after this
     fraud_burst_min: int = 5                        # near-identical reports from new accounts that raise a flag

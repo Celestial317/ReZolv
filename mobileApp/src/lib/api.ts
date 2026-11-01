@@ -77,7 +77,7 @@ export async function api<T = unknown>(path: string, init: { method?: string; bo
 }
 
 /** Uploads a recorded voice note or a photo straight to the server. Returns the key to send with the report. */
-export async function uploadMedia(kind: "voice" | "photo", uri: string, contentType: string, reportId?: string) {
+export async function uploadMedia(kind: "voice" | "photo" | "asset", uri: string, contentType: string, reportId?: string) {
   const qs = `kind=${kind}${reportId ? `&report_id=${reportId}` : ""}`;
   let res;
   try {
@@ -130,3 +130,10 @@ export type ReportStatus = {
   id: string; receipt_code: string; processing: boolean; issue_id: string | null; code: string | null; title: string | null;
   status: string | null; report_count: number | null; joined_others: number | null;
 };
+
+export type Asset = {
+  id: string; code: string; name: string; type: string; type_label: string; category: string; photo_url: string | null;
+  location: string | null; floor: string | null; status: "proposed" | "approved"; mine?: boolean;
+  issues?: number; open_issues?: number; distance_m?: number;
+};
+export type AssetType = { key: string; label: string; category: string };

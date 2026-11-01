@@ -8,7 +8,7 @@ import CampusMap from "@/components/CampusMap";
 import { BackIcon, CameraIcon, CloseIcon, MicIcon, PinIcon, SendIcon } from "@/components/Icons";
 import Mitraa from "@/components/Mitraa";
 import { Button, Card, Chip, ErrorBox, IconButton, Notice, Segmented, Txt } from "@/components/ui";
-import { api, uploadMedia, type Issue, type Place } from "@/lib/api";
+import { api, uploadMedia, type Asset, type Issue, type Place } from "@/lib/api";
 import { CAMPUS_CENTER } from "@/lib/campus";
 import { clock } from "@/lib/format";
 import { color, font } from "@/lib/theme";
@@ -42,7 +42,7 @@ function Waveform({ live }: { live: boolean }) {
 
 export default function Report() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ mode?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; asset?: string }>();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<"speak" | "type">(params.mode === "type" ? "type" : "speak");
   const [text, setText] = useState("");
@@ -51,6 +51,7 @@ export default function Report() {
   const [floor, setFloor] = useState("Ground");
   const [center, setCenter] = useState<[number, number]>(CAMPUS_CENTER);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [asset, setAsset] = useState<Asset | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,7 +62,8 @@ export default function Report() {
   useEffect(() => {
     api<Place[]>("/locations").then(setPlaces).catch(() => {});
     api<Issue[]>("/issues/nearby").then(setIssues).catch(() => {});
-  }, []);
+    if (params.asset) api<Asset>(`/assets/by-code/${params.asset}`).then(setAsset).catch((e: Error) => setError(e.message));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (params.mode === "photo") pickPhoto(true);
@@ -138,8 +140,8 @@ export default function Report() {
         text: mode === "type" ? text.trim() : undefined,
         voice_key: voiceKey,
         photo_key: photoKey,
-        floor: floor === "Ground" ? "Ground" : floor,
-        ...(place ? { location_id: place.id } : { lat: center[0], lng: center[1] }),
+        floor,
+        ...(asset ? { asset_code: asset.code } : place ? { location_id: place.id } : { lat: center[0], lng: center[1] }),
       };
       const r = await api<{ report_id: string; receipt_code: string }>("/reports", { method: "POST", body });
       router.replace(`/sent?id=${r.report_id}&code=${r.receipt_code}`);
@@ -149,7 +151,7 @@ export default function Report() {
     }
   }
 
-  const back = () => (step === 1 ? router.back() : setStep(step - 1));
+  const back = () => (step === 1 ? router.back() : setStep(asset && step === 3 ? 1 : step - 1));
   const titles = ["What happened?", "Where is it?", "Check and send"];
 
   return (
@@ -166,6 +168,7 @@ export default function Report() {
       {step === 1 && (
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
           <View style={{ paddingHorizontal: 18, gap: 14 }}>
+            {asset && <Notice text={`Reporting: ${asset.name}`} />}
             <Segmented value={mode} onChange={setMode} options={[{ key: "speak", label: "Speak" }, { key: "type", label: "Type" }]} />
             {mode === "speak" ? (
               <View style={{ backgroundColor: color.ink, borderRadius: 28, padding: 22, alignItems: "center", gap: 6 }}>
@@ -234,7 +237,7 @@ export default function Report() {
             <Card>
               {[
                 [mode === "speak" ? "Voice note" : "Typed report", mode === "speak" ? clock(voice?.secs ?? 0) : `${text.trim().length} characters`],
-                ["Place", `${place ? place.name : "Open ground"} · ${floor}`],
+                [asset ? "Equipment" : "Place", asset ? `${asset.name}${asset.floor ? ` · ${asset.floor}` : ""}` : `${place ? place.name : "Open ground"} · ${floor}`],
                 ["Photo", photo ? "Attached" : "None"],
               ].map(([k, v], n) => (
                 <View key={k} style={{ flexDirection: "row", justifyContent: "space-between", padding: 16, borderTopWidth: n ? 1 : 0, borderTopColor: color.line }}>
@@ -252,7 +255,7 @@ export default function Report() {
 
       <View style={{ padding: 18, borderTopWidth: 1, borderTopColor: color.line, backgroundColor: color.bg }}>
         {step < 3 ? (
-          <Button label={step === 1 ? "Next · pin the place" : "Confirm place"} disabled={step === 1 && !hasInput || rec.isRecording} onPress={() => setStep(step + 1)} />
+          <Button label={step === 1 ? (asset ? "Next · check and send" : "Next · pin the place") : "Confirm place"} disabled={step === 1 && (!hasInput || (!!params.asset && !asset)) || rec.isRecording} onPress={() => setStep(asset && step === 1 ? 3 : step + 1)} />
         ) : (
           <Button label="Send report" icon={<SendIcon color="#fff" />} loading={busy} onPress={send} />
         )}

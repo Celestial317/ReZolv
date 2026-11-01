@@ -112,7 +112,7 @@ export default function CampusMap({ markers = [], mode = "view", center = CAMPUS
 
 const s = StyleSheet.create({
   box: { overflow: "hidden", backgroundColor: "#e8eeec" },
-  pinWrap: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", paddingBottom: 54 },
+  pinWrap: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", paddingBottom: 54 },
   ctl: { position: "absolute", right: 12, bottom: 36, gap: 8 },
   ctlBtn: {
     width: 44, height: 44, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: color.line, alignItems: "center", justifyContent: "center",

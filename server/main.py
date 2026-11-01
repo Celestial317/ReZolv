@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import db
 from agents import promise_keeper, safe_review
 from config import settings
-from routes import admin, auth_routes, safe, student
+from routes import admin, assets, auth_routes, safe, student
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("rezolv")
@@ -48,6 +48,8 @@ app.include_router(auth_routes.router)
 app.include_router(student.router)
 app.include_router(admin.router)
 app.include_router(safe.router)
+app.include_router(assets.router)
+app.include_router(assets.admin)
 
 
 @app.get("/health")

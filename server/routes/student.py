@@ -66,7 +66,7 @@ def presign(body: PresignIn, user: Student):
 
 
 @router.post("/uploads/media")
-async def upload_media(request: Request, user: Student, kind: Literal["voice", "photo"], report_id: uuid.UUID | None = None):
+async def upload_media(request: Request, user: Student, kind: Literal["voice", "photo", "asset"], report_id: uuid.UUID | None = None):
     """Raw bytes in the body (Content-Type audio/* or image/*). Stored in the object bucket when configured,
     otherwise on the server's disk. Returns the key to send with POST /reports."""
     content_type = (request.headers.get("content-type") or "").split(";")[0].strip()
@@ -77,7 +77,8 @@ async def upload_media(request: Request, user: Student, kind: Literal["voice", "
     if not data or len(data) > 15 * 1024 * 1024:
         raise HTTPException(400, "Empty or too large (15 MB max)")
     rid = report_id or uuid.uuid4()
-    return {"report_id": rid, "key": storage.save(kind, f"reports/{rid}.{ext}", data, content_type)}
+    folder = "assets" if kind == "asset" else "reports"
+    return {"report_id": rid, "key": storage.save(kind, f"{folder}/{rid}.{ext}", data, content_type)}
 
 
 # ---------- reports ----------
@@ -89,7 +90,8 @@ class ReportIn(BaseModel):
     photo_key: str | None = None
     lat: float | None = None
     lng: float | None = None
-    location_id: uuid.UUID | None = None  # from a QR sticker: skips the map step
+    location_id: uuid.UUID | None = None  # a known place: skips the map step
+    asset_code: str | None = None          # a scanned equipment sticker, e.g. RZV-A-014
     floor: str | None = None
     is_sensitive: bool = False
     # Safe Voice: now = confidential officer at once, wait = protected until a pattern or the review deadline,
@@ -106,7 +108,20 @@ def create_report(body: ReportIn, user: Student, tasks: BackgroundTasks):
     for key, bucket in ((body.voice_key, settings.bucket_voice), (body.photo_key, settings.bucket_photos)):
         if key and (not key.startswith((f"{bucket}/reports/", "local/reports/")) or str(report_id) not in key):
             raise HTTPException(400, "Upload key does not match this report")
-    if body.location_id:
+    asset = None
+    if body.asset_code:
+        asset = db.fetchone(
+            """SELECT a.id, a.floor, a.lat, a.lng, a.location_id, l.name FROM assets a
+               LEFT JOIN locations l ON l.id = a.location_id WHERE a.code = %s AND a.status = 'approved'""",
+            (body.asset_code.strip().upper(),),
+        )
+        if not asset:
+            raise HTTPException(404, "That equipment sticker is not registered")
+    if asset:
+        loc = {"id": asset["location_id"], "name": asset["name"]}
+        lat, lng = asset["lat"], asset["lng"]
+        body.floor = body.floor or asset["floor"]
+    elif body.location_id:
         loc = db.fetchone("SELECT id, name, lat, lng FROM locations WHERE id=%s", (body.location_id,))
         if not loc:
             raise HTTPException(404, "Unknown location")
@@ -122,11 +137,11 @@ def create_report(body: ReportIn, user: Student, tasks: BackgroundTasks):
     shared = (body.shared_name or "").strip() or None if handling == "named" else None
     row = db.fetchone(
         """INSERT INTO reports (id, pseudonym, text_original, is_sensitive, location_id, lat, lng, floor,
-                                voice_key, photo_key, receipt_code, handling, shared_name)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id, receipt_code, created_at""",
+                                voice_key, photo_key, receipt_code, handling, shared_name, asset_id)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id, receipt_code, created_at""",
         (report_id, user["pseudonym"], (body.text or "").strip() or None, body.is_sensitive,
          loc["id"] if loc else None, lat, lng, body.floor, body.voice_key, body.photo_key,
-         receipt_code(), handling, shared),
+         receipt_code(), handling, shared, asset["id"] if asset else None),
     )
     tasks.add_task(pipeline.process_report, row["id"])
     if solana_anchor.enabled():

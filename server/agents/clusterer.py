@@ -28,6 +28,21 @@ def run(report: dict, analysis, embedding: list[float]) -> tuple[dict, bool]:
         handling = "now"  # urgent never waits, whatever the student chose
 
     match, candidates = None, []
+    asset_id = report.get("asset_id")
+    if asset_id and not sensitive:
+        match = db.fetchone(
+            """SELECT id, code, title, category, location_id, is_sensitive, status, handling, 0.0 AS distance
+               FROM issues WHERE asset_id=%s AND category=%s AND NOT is_sensitive AND status <> 'resolved'
+               ORDER BY created_at DESC LIMIT 1""",
+            (asset_id, analysis.category),
+        )
+        if match:
+            db.execute("UPDATE reports SET issue_id=%s WHERE id=%s", (match["id"], report["id"]))
+            refresh_counts(match["id"])
+            trace.record(match["id"], "merged", "clusterer", f"New report merged into {match['code']}",
+                         "Reported on the same registered equipment, with the same kind of problem.",
+                         evidence=[{"type": "report", "id": str(report["id"])}])
+            return match, False
     if handling != "named":
         # ybhnsw applies WHERE after the index scan, so fetch a few extra rows and filter here.
         candidates = db.fetchall(
@@ -69,10 +84,10 @@ def run(report: dict, analysis, embedding: list[float]) -> tuple[dict, bool]:
     best = candidates[0]["distance"] if candidates else None
     status = "sealed" if sensitive and handling != "named" else "open"
     issue = db.fetchone(
-        """INSERT INTO issues (code, title, category, location_id, status, is_sensitive, embedding, handling, urgent)
-           VALUES ('RZV-' || nextval('issue_code_seq'), %s, %s, %s, %s, %s, %s::vector, %s, %s)
+        """INSERT INTO issues (code, title, category, location_id, status, is_sensitive, embedding, handling, urgent, asset_id)
+           VALUES ('RZV-' || nextval('issue_code_seq'), %s, %s, %s, %s, %s, %s::vector, %s, %s, %s)
            RETURNING id, code, title, category, location_id, is_sensitive, status, handling""",
-        (title, analysis.category, report["location_id"], status, sensitive, vec, handling, bool(analysis.urgent)),
+        (title, analysis.category, report["location_id"], status, sensitive, vec, handling, bool(analysis.urgent), None if sensitive else asset_id),
     )
     db.execute("UPDATE reports SET issue_id=%s WHERE id=%s", (issue["id"], report["id"]))
     refresh_counts(issue["id"])

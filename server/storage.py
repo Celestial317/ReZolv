@@ -25,6 +25,8 @@ def enabled() -> bool:
 
 
 def bucket_for(kind: str) -> str:
+    if kind == "asset":
+        return settings.bucket_assets
     return settings.bucket_voice if kind == "voice" else settings.bucket_photos
 
 

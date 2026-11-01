@@ -166,3 +166,9 @@ td .sub { color: var(--grey-500); font-size: 12.5px; }
   .login { grid-template-columns: 1fr; }
   .login .art { display: none; }
 }
+
+/* ---------- equipment ---------- */
+.thumb { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: var(--grey-100); flex: none; border: 1px solid var(--grey-200); }
+.thumb.big { width: 100%; height: 260px; }
+.qrbox { background: #fff; border: 1px solid var(--grey-200); border-radius: var(--radius); padding: 14px; display: grid; place-items: center; }
+.qrbox img { width: 100%; max-width: 280px; }
