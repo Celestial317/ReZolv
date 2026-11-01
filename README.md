@@ -14,6 +14,9 @@
 
 # ReZolv
 
+- 🎨 **Presentation (Canva):** https://canva.link/sx0cwcths7cestp
+- 🎥 **Video solution:** https://drive.google.com/drive/folders/1pVR2Tf8CDBC0tQ3L3q3tphRN1W-yAPlG
+
 Students report campus problems by voice or text. Agents merge duplicates, find root causes, route issues, and track every promise until the students confirm the fix. Demo campus: Shaheed Sukhdev College of Business Studies, Rohini, Delhi.
 
 | Folder | What | Port |
