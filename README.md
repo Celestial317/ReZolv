@@ -1,6 +1,6 @@
 # ReZolv
 
-Students report campus problems by voice or text. Agents merge duplicates, find root causes, route issues, and track every promise until the students confirm the fix. Demo campus: Shaheed Sukhdev College of Business Studies, Rohini, Delhi..
+Students report campus problems by voice or text. Agents merge duplicates, find root causes, route issues, and track every promise until the students confirm the fix. Demo campus: Shaheed Sukhdev College of Business Studies, Rohini, Delhi.
 
 | Folder | What | Port |
 |---|---|---|
