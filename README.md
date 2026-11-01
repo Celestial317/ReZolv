@@ -1,3 +1,17 @@
+## 👥 Team Members
+
+**Team merge conflict**
+
+| Name                  | Role        |
+| --------------------- | ----------- |
+| **Soumya Sourav Das** | Team Leader |
+| Shivam Kumar          | Team Member |
+| Saransh Sourav        | Team Member |
+| Sudhanshu Shekhar     | Team Member |
+
+---
+
+
 # ReZolv
 
 Students report campus problems by voice or text. Agents merge duplicates, find root causes, route issues, and track every promise until the students confirm the fix. Demo campus: Shaheed Sukhdev College of Business Studies, Rohini, Delhi.
