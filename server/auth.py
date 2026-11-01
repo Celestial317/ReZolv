@@ -8,7 +8,8 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from config import settings
 
-STAFF_ROLES = ("dean", "warden", "dept_head", "committee")
+STAFF_ROLES = ("dean", "warden", "dept_head", "committee", "officer")
+SAFE_ROLES = ("committee", "officer")  # the only roles that may read sensitive reports
 _bearer = HTTPBearer(auto_error=False)
 
 
@@ -49,4 +50,10 @@ def student(user: Annotated[dict, Depends(current_user)]) -> dict:
 def staff(user: Annotated[dict, Depends(current_user)]) -> dict:
     if user["role"] not in STAFF_ROLES:
         raise HTTPException(403, "Staff only")
+    return user
+
+
+def safe_staff(user: Annotated[dict, Depends(current_user)]) -> dict:
+    if user["role"] not in SAFE_ROLES:
+        raise HTTPException(403, "Confidential officer or committee only")
     return user

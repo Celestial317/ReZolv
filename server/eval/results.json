@@ -1,0 +1,15 @@
+{
+  "reports": 20,
+  "category_accuracy_pct": 90.0,
+  "routing_accuracy_pct": 90.0,
+  "merge_precision_pct": 100.0,
+  "merge_recall_pct": 100.0,
+  "pairs": {
+    "true_merge": 21,
+    "wrong_merge": 0,
+    "missed_merge": 0,
+    "correct_split": 169
+  },
+  "model": "gemini-3.5-flash-lite",
+  "distance_limit": 0.2
+}

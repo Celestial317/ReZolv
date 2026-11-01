@@ -5,3 +5,5 @@ node_modules/
 .next/
 *.pyc
 .cache/
+media/
+.next-test/

@@ -50,5 +50,26 @@ def presign_get(stored: str, expires: int = 900) -> str:
 
 
 def download(stored: str) -> bytes:
+    if stored.startswith("local/"):
+        return (MEDIA_DIR / stored.removeprefix("local/")).read_bytes()
     bucket, key = split_key(stored)
     return client().get_object(Bucket=bucket, Key=key)["Body"].read()
+
+
+# ---------- local disk fallback (no object storage configured) ----------
+
+from pathlib import Path
+
+MEDIA_DIR = Path(__file__).resolve().parent / "media"
+
+
+def save(kind: str, key: str, data: bytes, content_type: str) -> str:
+    """Store a file and return its key: 'bucket/key' on Vultr, 'local/key' on disk."""
+    if enabled():
+        bucket = bucket_for(kind)
+        client().put_object(Bucket=bucket, Key=key, Body=data, ContentType=content_type)
+        return f"{bucket}/{key}"
+    path = MEDIA_DIR / key
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+    return f"local/{key}"

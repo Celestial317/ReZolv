@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     solana_keypair_path: str = ""
 
     cluster_max_distance: float = 0.20
+    public_app_url: str = "http://localhost:3000"   # base of the links printed on QR stickers
+    campus_security_phone: str = "112"              # shown on the "Call campus security" button
+    safe_review_days: int = 7                       # a waiting Safe Voice report reaches the officer after this
+    fraud_burst_min: int = 5                        # near-identical reports from new accounts that raise a flag
+    verifier_use_llm: bool = False                  # also ask Gemini to judge free-text claims (costs calls)
     promise_loop_seconds: int = 300
 
 

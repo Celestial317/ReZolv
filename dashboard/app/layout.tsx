@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Urbanist } from "next/font/google";
+import { Urbanist } from "next/font/google";
 import "./globals.css";
 
-const sans = Urbanist({ subsets: ["latin"], variable: "--font-sans", weight: ["400", "500", "600", "700", "800"] });
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", weight: ["400", "500", "600"] });
+const font = Urbanist({ subsets: ["latin"], variable: "--font", weight: ["400", "500", "600", "700", "800"] });
 
-export const metadata: Metadata = { title: "ReZolv Staff", description: "Campus grievance dashboard" };
+export const metadata: Metadata = { title: "ReZolv Staff" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
+    <html lang="en" className={font.variable}>
       <body>{children}</body>
     </html>
   );

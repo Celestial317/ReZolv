@@ -1,0 +1,125 @@
+{
+  "_note": "20 reports with known answers. group = which reports describe the same real problem, location = where the student pinned it (the clusterer only merges reports from the same place). Written by hand for the demo.",
+  "reports": [
+    {
+      "text": "Hostel B mein paani nahi aa raha",
+      "group": "water-b",
+      "category": "water",
+      "location": "Hostel B"
+    },
+    {
+      "text": "No water on the 2nd floor of Hostel B",
+      "group": "water-b",
+      "category": "water",
+      "location": "Hostel B"
+    },
+    {
+      "text": "paani nahi aa raha 2nd floor pe hostel B",
+      "group": "water-b",
+      "category": "water",
+      "location": "Hostel B"
+    },
+    {
+      "text": "Hostel B ke bathroom mein ek boond paani nahi hai",
+      "group": "water-b",
+      "category": "water",
+      "location": "Hostel B"
+    },
+    {
+      "text": "Hostel C mein WiFi kaam nahi kar raha",
+      "group": "wifi-c",
+      "category": "internet",
+      "location": "Hostel C"
+    },
+    {
+      "text": "Wi-Fi is down in Hostel C",
+      "group": "wifi-c",
+      "category": "internet",
+      "location": "Hostel C"
+    },
+    {
+      "text": "internet nahi chal raha hostel C me",
+      "group": "wifi-c",
+      "category": "internet",
+      "location": "Hostel C"
+    },
+    {
+      "text": "No internet connection in Hostel C since yesterday",
+      "group": "wifi-c",
+      "category": "internet",
+      "location": "Hostel C"
+    },
+    {
+      "text": "Mess mein safai ki bahut samasya hai",
+      "group": "mess",
+      "category": "food",
+      "location": "Mess"
+    },
+    {
+      "text": "Found insects in the dal at the mess",
+      "group": "mess",
+      "category": "food",
+      "location": "Mess"
+    },
+    {
+      "text": "Mess ka khana ganda hai, hygiene theek nahi",
+      "group": "mess",
+      "category": "food",
+      "location": "Mess"
+    },
+    {
+      "text": "Library ki lights jhilmil kar rahi hain",
+      "group": "library-lights",
+      "category": "electricity",
+      "location": "Library"
+    },
+    {
+      "text": "The third floor library lights are flickering",
+      "group": "library-lights",
+      "category": "electricity",
+      "location": "Library"
+    },
+    {
+      "text": "Library mein tube light flicker ho rahi hai",
+      "group": "library-lights",
+      "category": "electricity",
+      "location": "Library"
+    },
+    {
+      "text": "Hostel A mein bijli chali gayi",
+      "group": "power-a",
+      "category": "electricity",
+      "location": "Hostel A"
+    },
+    {
+      "text": "Power cut in Hostel A",
+      "group": "power-a",
+      "category": "electricity",
+      "location": "Hostel A"
+    },
+    {
+      "text": "Main gate ke paas streetlight band hai, bahut andhera hai",
+      "group": "gate-dark",
+      "category": "safety",
+      "location": "Main Gate"
+    },
+    {
+      "text": "The street light near the main gate is not working and it is very dark",
+      "group": "gate-dark",
+      "category": "safety",
+      "location": "Main Gate"
+    },
+    {
+      "text": "A senior keeps harassing me in the corridor",
+      "group": "harass",
+      "category": "sensitive",
+      "location": "Girls Hostel"
+    },
+    {
+      "text": "Mujhe ek senior baar baar pareshan karta hai, ragging jaisa lagta hai",
+      "group": "harass",
+      "category": "sensitive",
+      "location": "Girls Hostel"
+    }
+  ]
+}

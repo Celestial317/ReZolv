@@ -1,78 +1,49 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { IconCheck } from "@/components/Icons";
-import Topbar from "@/components/Topbar";
-import { Bar, Pill, StatTile } from "@/components/ui";
-import { ESCALATION_POLICY, PROMISE_BOARD, PROMISE_TILES } from "@/lib/mock";
+import { useApi } from "@/lib/api";
+import { cat, lateness, when } from "@/lib/format";
+import { Async, CatTag, LevelTag, PageHead } from "@/components/ui";
 
-const OWNERS = ["All", "Estates", "IT Services", "Mess Committee"] as const;
+type Card = { id: string; issue_id: string; code: string; title: string; category: string; text: string; due_at: string; department: string; escalation_level: number; hours_late: number };
+type Board = Record<"overdue" | "due_soon" | "waiting_for_students" | "on_track" | "kept", Card[]>;
 
-export default function PromisesPage() {
-  const [owner, setOwner] = useState<(typeof OWNERS)[number]>("All");
-  const [nudged, setNudged] = useState<Set<string>>(new Set());
+const COLUMNS: { key: keyof Board; label: string }[] = [
+  { key: "overdue", label: "Overdue" },
+  { key: "due_soon", label: "Due within 48 hours" },
+  { key: "waiting_for_students", label: "Waiting for students" },
+  { key: "on_track", label: "On track" },
+  { key: "kept", label: "Kept" },
+];
 
+export default function Promises() {
+  const board = useApi<Board>("/admin/promises");
   return (
     <>
-      <Topbar title="Promises" sub="Every commitment, tracked until students confirm the fix" />
-      <div className="page">
-        <section className="tiles">
-          {PROMISE_TILES.map((t) => <StatTile key={t.label} {...t} dark={false} />)}
-        </section>
-
-        <div className="chips">
-          <span className="chip-label">Owner</span>
-          {OWNERS.map((o) => (
-            <button key={o} className={`chip${owner === o ? " on" : ""}`} onClick={() => setOwner(o)}>{o}</button>
-          ))}
-        </div>
-
-        <div className="board">
-          {PROMISE_BOARD.map((col) => {
-            const cards = col.cards.filter((c) => owner === "All" || c.dept === owner);
-            return (
-              <section className="col" key={col.key} aria-label={col.title}>
-                <div className="col-head"><i style={{ background: col.color }} />{col.title}<span className="n">{cards.length}</span></div>
-                {cards.length === 0 && <p className="faint" style={{ fontSize: 12.5, padding: "4px 4px 8px" }}>Nothing here.</p>}
-                {cards.map((c) => (
-                  <article className="pcard" key={c.code}>
-                    <div className="top">
-                      <Link href={`/issues/${c.code}`} className="c">{c.code}</Link>
-                      <span className={col.whenClass.includes("kept") ? "" : col.whenClass} style={col.key === "kept" ? { color: "var(--green)" } : undefined}>{c.when}</span>
+      <PageHead title="Promises" />
+      <Async state={board}>
+        {(b) => (
+          <div className="board">
+            {COLUMNS.map((c) => (
+              <div className="col" key={c.key}>
+                <h3>{c.label}<span>{b[c.key].length}</span></h3>
+                {b[c.key].length === 0 && <p className="muted" style={{ padding: "4px 4px 8px" }}>None</p>}
+                {b[c.key].map((p) => (
+                  <Link href={`/issues/${p.issue_id}`} className="item" key={p.id} style={{ borderLeft: `5px solid ${cat(p.category).pin}` }}>
+                    <span className="code">{p.code}</span> <CatTag category={p.category} />
+                    <div><b>{p.title}</b></div>
+                    <div className="sub muted">{p.text}</div>
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <LevelTag level={p.escalation_level} />
+                      <span className="sub muted">{c.key === "overdue" ? lateness(p.hours_late) : when(p.due_at)}</span>
                     </div>
-                    <h4>{c.text}</h4>
-                    <small>{c.owner}</small>
-                    {c.escalated && <span><Pill tone="red">{c.escalated}</Pill></span>}
-                    {c.confirmed && (
-                      <>
-                        <b style={{ fontSize: 12, color: "var(--amber-ink)" }}>{c.confirmed.yes} of {c.confirmed.of} students confirmed</b>
-                        <Bar value={c.confirmed.yes / c.confirmed.of} color="var(--amber)" />
-                      </>
-                    )}
-                    {(col.key === "overdue" || col.key === "due_soon") && (
-                      <button className="btn btn-sm" style={{ marginTop: 4 }} disabled={nudged.has(c.code)}
-                        onClick={() => setNudged((s) => new Set(s).add(c.code))}>
-                        {nudged.has(c.code) ? <><IconCheck size={14} /> Owner nudged</> : "Nudge owner"}
-                      </button>
-                    )}
-                  </article>
+                  </Link>
                 ))}
-              </section>
-            );
-          })}
-        </div>
-
-        <section className="card policy">
-          <div>
-            <h3>Escalation policy</h3>
-            <p className="muted" style={{ fontSize: 12.5 }}>Applied automatically by the Promise Keeper.</p>
+              </div>
+            ))}
           </div>
-          <div className="steps">
-            {ESCALATION_POLICY.map((p) => <div className="step" key={p.when}><span>{p.when.toUpperCase()}</span>{p.who}</div>)}
-          </div>
-        </section>
-      </div>
+        )}
+      </Async>
     </>
   );
 }

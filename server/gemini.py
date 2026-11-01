@@ -42,6 +42,7 @@ class Analysis(BaseModel):
     category: Literal["water", "electricity", "internet", "food", "safety", "sensitive", "other"]
     severity: int
     is_sensitive: bool
+    urgent: bool = False
 
 
 _PROMPT = """You are the intake agent of a campus grievance system in India.
@@ -54,9 +55,29 @@ Analyse the student's report ({source}). Return JSON with:
   ("sensitive" = harassment, ragging, abuse, discrimination, mental-health crisis)
 - severity: 1 (minor) to 5 (urgent / health risk)
 - is_sensitive: true if the student's identity must be protected
+- urgent: true ONLY if there is an immediate danger to a person (threat, assault, self-harm, weapon, fire). Never true for ordinary faults
 Never invent names. Do not include personal identifiers in title."""
 
 _client = None
+_tracking = threading.local()
+
+
+def begin_tracking() -> None:
+    """Start counting Gemini tokens for the current thread (one report's pipeline)."""
+    _tracking.tokens = 0
+
+
+def end_tracking() -> int:
+    n = getattr(_tracking, "tokens", 0) or 0
+    _tracking.tokens = None
+    return n
+
+
+def _count(resp) -> None:
+    if getattr(_tracking, "tokens", None) is None:
+        return
+    usage = getattr(resp, "usage_metadata", None)
+    _tracking.tokens += int(getattr(usage, "total_token_count", 0) or 0)
 
 
 def enabled() -> bool:
@@ -169,12 +190,24 @@ def _call(kind: str, fn, *, patient: bool = False):
 
 # ---------- transcribe + classify ----------
 
+def _ffmpeg() -> str:
+    """The system ffmpeg if there is one, otherwise the static binary shipped by imageio-ffmpeg."""
+    import shutil
+
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    import imageio_ffmpeg
+
+    return imageio_ffmpeg.get_ffmpeg_exe()
+
+
 def to_mp3(data: bytes, suffix: str = ".webm") -> bytes:
     with tempfile.TemporaryDirectory() as d:
         src, dst = Path(d, "in" + suffix), Path(d, "out.mp3")
         src.write_bytes(data)
         subprocess.run(
-            ["ffmpeg", "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", str(dst)],
+            [_ffmpeg(), "-y", "-i", str(src), "-vn", "-ac", "1", "-ar", "16000", "-b:a", "48k", str(dst)],
             check=True,
             capture_output=True,
         )
@@ -190,6 +223,7 @@ def _generate_analysis(contents):
             contents=contents,
             config=types.GenerateContentConfig(response_mime_type="application/json", response_schema=Analysis),
         )
+        _count(resp)
         return Analysis.model_validate_json(resp.text)
 
     return go
@@ -307,6 +341,41 @@ def embed(text: str) -> list[float]:
     return vec
 
 
+def embed_many(texts: list[str]) -> list[float]:
+    """Average the embeddings of several phrasings of one text (original + English translation).
+
+    Distinct, uncached phrasings go out in a single request, so Hinglish costs one call, not two.
+    """
+    texts = list(dict.fromkeys(t.strip() for t in texts if t and t.strip()))
+    if len(texts) <= 1:
+        return embed(texts[0] if texts else "")
+    keys = [hashlib.sha1(f"{settings.gemini_embed_model}|{t.lower()}".encode()).hexdigest() for t in texts]
+    with _embed_lock:
+        cache = _load_cache()
+        missing = [(t, k) for t, k in zip(texts, keys) if k not in cache]
+    if missing:
+        def go():
+            from google.genai import types
+
+            resp = _gc().models.embed_content(
+                model=settings.gemini_embed_model,
+                contents=[t for t, _ in missing],
+                config=types.EmbedContentConfig(output_dimensionality=EMBED_DIM, task_type="SEMANTIC_SIMILARITY"),
+            )
+            return [_normalize(list(e.values)) for e in resp.embeddings]
+
+        vecs = _call("embed", go)
+        if vecs is None:
+            return _mock_embed(" ".join(texts))
+        with _embed_lock:
+            for (_, k), v in zip(missing, vecs):
+                _load_cache()[k] = v
+            _save_cache()
+    with _embed_lock:
+        vs = [_load_cache()[k] for k in keys]
+    return _normalize([sum(x) for x in zip(*vs)])
+
+
 def _mock_embed(text: str) -> list[float]:
     v = [0.0] * EMBED_DIM
     for tok in re.findall(r"\w+", text.lower()):
@@ -318,7 +387,12 @@ def _mock_embed(text: str) -> list[float]:
 # ---------- free-form ----------
 
 def generate_text(prompt: str) -> str | None:
-    return _call("text", lambda: _gc().models.generate_content(model=settings.gemini_model, contents=prompt).text)
+    def go():
+        resp = _gc().models.generate_content(model=settings.gemini_model, contents=prompt)
+        _count(resp)
+        return resp.text
+
+    return _call("text", go)
 
 
 def generate_json(prompt: str):
@@ -330,6 +404,32 @@ def generate_json(prompt: str):
             contents=prompt,
             config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
+        _count(resp)
         return json.loads(resp.text)
 
     return _call("text", go)
+
+
+_structured_cache: dict[str, object] = {}
+
+
+def generate_structured(prompt: str, schema):
+    """One structured-output call, cached by prompt. Returns a `schema` instance or None."""
+    key = hashlib.sha1((schema.__name__ + prompt).encode()).hexdigest()
+    if key in _structured_cache:
+        return _structured_cache[key]
+    from google.genai import types
+
+    def go():
+        resp = _gc().models.generate_content(
+            model=settings.gemini_model,
+            contents=prompt,
+            config=types.GenerateContentConfig(response_mime_type="application/json", response_schema=schema),
+        )
+        _count(resp)
+        return schema.model_validate_json(resp.text)
+
+    out = _call("text", go)
+    if out is not None:
+        _structured_cache[key] = out
+    return out

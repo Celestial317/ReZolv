@@ -21,7 +21,7 @@ log = logging.getLogger("rezolv.meko")
 TIMEOUT = 25
 CACHE_FILE = Path(__file__).resolve().parent / ".cache" / "meko.json"
 # Tools that take a datapack_id argument.
-_DATAPACK_TOOLS = {"conversation_create", "conversation_add_message", "memory_add", "memory_search", "context_search"}
+_DATAPACK_TOOLS = {"knowledgebase_search", "conversation_create", "conversation_add_message", "memory_add", "memory_search", "context_search"}
 _lock = threading.Lock()
 
 

@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "ReZolv",
+    "slug": "rezolv",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "rezolv",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.rezolv.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#D3F1ED",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "INTERNET",
+        "RECORD_AUDIO",
+        "CAMERA"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#D3F1ED",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 160
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "ReZolv records your voice note."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "ReZolv takes a photo of the problem.",
+          "photosPermission": "ReZolv attaches a photo of the problem."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}

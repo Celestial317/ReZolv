@@ -23,17 +23,12 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 python -m scripts.smoke_test        # end-to-end check (files one report, re-seed afterwards)
 ```
 
-## Demo logins (password `rezolv123`)
-| Who | Email |
-|---|---|
-| Phone user, "Student #4F2A" | `ananya.s@democampus.edu` |
-| Other students | `student02@campus.demo` ... `student50@campus.demo` |
-| Staff | `dean@rezolv.demo`, `warden@rezolv.demo`, `it@rezolv.demo`, `estates@rezolv.demo`, `committee@rezolv.demo` |
-
+## Demo logins
+See the root `README.md`: three students (`student123`) and three staff levels, Facilities Head, Warden and Dean (`staff123`).
 `POST /auth/login` returns a bearer token. Send it as `Authorization: Bearer <token>`. Students call the student routes, staff call `/admin/*`. Interactive docs are at `/docs`.
 
 ## Demo data
-Campus: Shaheed Sukhdev College of Business Studies, Rohini (12 spots, same coordinates as `mobileApp/lib/campus.ts`). 50 students, 5 staff, 6 departments, and the demo story: RZV-209 (water, escalated to the Dean, linked to power cuts), RZV-214 (Wi-Fi, 47 reports), RZV-217 (sealed, 4 of 5), RZV-219 (awaiting confirmation, 3 of 8), RZV-221 (mess), plus past issues for the scorecard.
+Campus: Shaheed Sukhdev College of Business Studies, Rohini (12 spots, same coordinates as the apps). 3 student logins plus 47 reporter pseudonyms without accounts, 3 staff logins, 6 departments, and the stories: RZV-209 (water, with the Dean, linked to power cuts), RZV-226 (street lights, with the Warden), RZV-214 (Wi-Fi, 47 reports), RZV-219 (awaiting students), RZV-221 (mess), and older sensitive cases RZV-217 and RZV-231 that stay in the database (the apps have no Safe Voice screens).
 
 ## Keys (all in `../.env`, all optional to start)
 | Key | Needed for | Without it |
@@ -47,3 +42,46 @@ After adding the Gemini key, run `python seed.py --reset` again so the seeded is
 
 ## Gemini rate limits
 A new report costs 2 calls (one to analyse, one to embed); "me too", merged duplicates, seeding and repeated text cost none because results are cached (`.cache/embeddings.json`). Text and voice calls are spaced to `GEMINI_RPM` per minute, embeddings to `GEMINI_EMBED_RPM`. A 429 backs off and retries, repeated 429s pause that call type for a minute, and after `GEMINI_DAILY_BUDGET` calls the server falls back to keyword classification. The root-cause and suggested-fix agents only call Gemini when SQL or Meko finds something worth explaining. `GET /health` shows today's call count.
+
+## Features (see `features.md`) and where they live
+| # | Feature | Server |
+|---|---|---|
+| 1, 2 | Voice and Hinglish reports; original + English embeddings averaged in one request | `agents/intake.py`, `gemini.embed_many` |
+| 3, 4 | Pin the spot, QR stickers | `GET /locations`, `POST /reports` accepts `location_id`, `GET /admin/qr`, `GET /admin/qr/{id}.svg` |
+| 5 | Student chooses visibility: `handling` = `now` / `wait` / `named` | `POST /reports`, `agents/privacy.py` |
+| 6 | Urgent skips the wait, "Call campus security", every report reaches a human in 7 days | `agents/intake.py`, `agents/safe_review.py`, `GET /help/security` |
+| 7 | Does the report give you away? | `POST /reports/check-anonymity`, `agents/anonymity.py` |
+| 8 | Anonymous two-way chat | `GET/POST /issues/{id}/safe-messages` (student), `POST /safe/issues/{id}/messages` (officer) |
+| 9 | "This is now N separate students", release to the committee at the threshold | `agents/privacy.py` |
+| 10 | Fake-report burst flag | `agents/fraud.py`, `GET /admin/flagged` |
+| 11 | Duplicates merge across languages (vector search) | `agents/clusterer.py` |
+| 12 | Root causes found by a time-lag test, explained by Gemini | `agents/root_cause.py` |
+| 13 | Fix the cause, close them all | `POST /admin/causes/{id}/fixed`, `GET /issues/awaiting` |
+| 14 | Forecasts from planned events | `POST /admin/calendar`, `GET /admin/forecasts` |
+| 15 | Campus graph in one query | `GET /admin/campus-graph` |
+| 16, 17 | "Why?" with a verification label on every claim | `agents/trace.py`, `agents/verifier.py` |
+| 18 | Agents remember what worked (Meko playbooks) | `agents/memory.py` |
+| 19 | Router learns from corrections, accuracy over time | `POST /admin/issues/{id}/reassign`, `GET /admin/routing-accuracy` |
+| 20 | Escalations quote the college rules from the Meko knowledge base (the three PDFs in `data_knowledge/`) | `rules.py` |
+| 21 | Tokens per issue, first-time vs repeat | `GET /admin/token-savings` |
+| 22-25 | Promises, escalation, students close issues, scorecard | existing routes |
+| 27 | Receipts, searchable by the student | `GET /reports/by-receipt/{code}` |
+
+Safe Voice access: the confidential officer reads every sensitive case through `/safe/*`; the committee reads only cases released to it (group concerns without pseudonyms, named complaints with the chosen name). All other staff get counts only (`/admin/sealed`), and sensitive issues never appear in any other `/admin` view or in Meko.
+
+### Measured numbers only
+- `python -m scripts.eval` runs the 20-report labelled test set (`eval/testset.json`) and writes `eval/results.json`, served by `GET /admin/eval`.
+- The root-cause numbers (hits, trials, chance rate, p-value) are computed from the data in `issue_links`.
+- `GET /admin/verification-stats` counts how many "Why?" claims were checked, contradicted or left unverified.
+- `GET /admin/token-savings` and `GET /admin/routing-accuracy` stay empty until there is real traffic to measure.
+
+### Judgement calls
+- The verifier is plain SQL (no Gemini calls). `VERIFIER_USE_LLM=true` also lets Gemini judge free-text suggested fixes; it can only upgrade a claim to verified, never mark one contradicted.
+- A student's "still broken" answers reopen an issue when a majority of reporters say so (not on a single answer), so one person cannot reopen everything.
+- Rule quotes come from the Meko knowledge base, and a passage is only quoted when Meko ranks it as relevant.
+
+## Escalation by students
+A student who answers "Still broken" on an issue awaiting confirmation, after the promise deadline, reopens it and moves the promise up one level (`agents/promise_keeper.escalate_after_dispute`). `GET /admin/escalations` returns the queue for the signed-in level (Facilities Head 0, Warden 1, Dean 2). Marking the issue fixed again clears the old answers so the students are asked again.
+
+## Voice and photos
+`POST /uploads/media?kind=voice|photo` takes the raw file. It goes to the Vultr bucket when `VULTR_S3_*` is set, otherwise to `server/media/`. Audio is converted with the system ffmpeg or the bundled `imageio-ffmpeg`.

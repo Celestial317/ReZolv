@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email         TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
-  role          TEXT NOT NULL CHECK (role IN ('student','dean','warden','dept_head','committee')),
+  role          TEXT NOT NULL CHECK (role IN ('student','dean','warden','dept_head','committee','officer')),
   name          TEXT,
   department_id UUID REFERENCES departments(id),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -126,6 +126,67 @@ CREATE TABLE IF NOT EXISTS anchors (
   solana_sig   TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- ---------- Safe Voice (sensitive reports) ----------
+-- handling: now = confidential officer at once, wait = protected until a pattern or 7 days, named = committee, with name
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('student','dean','warden','dept_head','committee','officer'));
+
+ALTER TABLE issues
+  ADD COLUMN IF NOT EXISTS handling      TEXT CHECK (handling IN ('now','wait','named')),
+  ADD COLUMN IF NOT EXISTS urgent        BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS officer_id    UUID,
+  ADD COLUMN IF NOT EXISTS reviewed_at   TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS safe_summary  TEXT,
+  ADD COLUMN IF NOT EXISTS flagged       BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS flag_reason   TEXT,
+  ADD COLUMN IF NOT EXISTS tokens_used   INT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS used_playbook BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE reports ADD COLUMN IF NOT EXISTS shared_name TEXT, ADD COLUMN IF NOT EXISTS handling TEXT;
+
+CREATE TABLE IF NOT EXISTS safe_messages (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  issue_id   UUID NOT NULL REFERENCES issues(id),
+  pseudonym  TEXT NOT NULL,
+  from_role  TEXT NOT NULL CHECK (from_role IN ('student','officer')),
+  text       TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ---------- Verified "Why?" and measured root causes ----------
+ALTER TABLE issue_events
+  ADD COLUMN IF NOT EXISTS evidence JSONB,
+  ADD COLUMN IF NOT EXISTS verified BOOLEAN;
+
+ALTER TABLE issue_links
+  ADD COLUMN IF NOT EXISTS hits          INT,
+  ADD COLUMN IF NOT EXISTS trials        INT,
+  ADD COLUMN IF NOT EXISTS baseline_rate REAL,
+  ADD COLUMN IF NOT EXISTS p_value       REAL;
+
+CREATE TABLE IF NOT EXISTS routing_corrections (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  issue_id    UUID NOT NULL REFERENCES issues(id),
+  category    TEXT NOT NULL,
+  location_id UUID REFERENCES locations(id),
+  from_dept   UUID REFERENCES departments(id),
+  to_dept     UUID NOT NULL REFERENCES departments(id),
+  made_by     UUID REFERENCES users(id),
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS campus_calendar (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  location_id UUID NOT NULL REFERENCES locations(id),
+  kind        TEXT NOT NULL,
+  note        TEXT,
+  starts_at   TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS safe_messages_idx ON safe_messages (issue_id, pseudonym, created_at);
+CREATE INDEX IF NOT EXISTS reports_created_idx ON reports (created_at);
+CREATE INDEX IF NOT EXISTS issues_loc_cat_idx ON issues (location_id, category, created_at);
 
 CREATE INDEX IF NOT EXISTS reports_issue_idx  ON reports (issue_id);
 CREATE INDEX IF NOT EXISTS reports_pseudo_idx ON reports (pseudonym);

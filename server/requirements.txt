@@ -10,3 +10,5 @@ mcp>=1.2
 # Optional (Solana devnet anchoring) - uncomment when enabling:
 # solana>=0.34
 # solders>=0.21
+segno>=1.6
+imageio-ffmpeg>=0.5

@@ -1,83 +1,91 @@
 "use client";
 
-import { useState } from "react";
-import BarChart from "@/components/BarChart";
-import Topbar from "@/components/Topbar";
-import { Bar } from "@/components/ui";
-import { KEPT_TARGET, SCORE_MONTHS, SCORECARD } from "@/lib/mock";
+import { useApi } from "@/lib/api";
+import { Async, Bar, Empty, PageHead } from "@/components/ui";
 
-const PERIODS = ["This month", "This term", "This year"] as const;
+type Dept = { id: string; name: string; kept: number; closed: number; kept_pct: number | null; open_issues: number };
+type Accuracy = { day: string; routed: number; moved: number; accuracy_pct: number | null };
+type Verify = { verified: number; contradicted: number; unverified: number; total: number };
+type Eval = { reports: number; category_accuracy_pct: number; routing_accuracy_pct: number; merge_precision_pct: number; merge_recall_pct: number };
 
-const keptColor = (n: number) => (n >= 85 ? "var(--green)" : n >= 65 ? "var(--teal)" : "var(--red)");
-
-export default function ScorecardPage() {
-  const [period, setPeriod] = useState<(typeof PERIODS)[number]>("This term");
-  const [selected, setSelected] = useState(2);
-  const [publicView, setPublicView] = useState(true);
-  const dept = SCORECARD[selected];
-  const learned = dept.learned ?? [
-    `Kept ${dept.kept}% of promises this term.`,
-    `Average fix takes ${dept.fix}.`,
-    `${dept.back}% of fixed issues came back within 30 days.`,
-  ];
+export default function Scorecard() {
+  const score = useApi<Dept[]>("/admin/scorecard");
+  const acc = useApi<Accuracy[]>("/admin/routing-accuracy");
+  const ver = useApi<Verify>("/admin/verification-stats");
+  const ev = useApi<Eval>("/admin/eval");
 
   return (
     <>
-      <Topbar title="Department scorecard" sub="Who keeps their promises" />
-      <div className="page">
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <div className="seg" role="tablist">
-            {PERIODS.map((p) => <button key={p} className={period === p ? "on" : ""} onClick={() => setPeriod(p)}>{p}</button>)}
-          </div>
-          <label className="check" style={{ marginLeft: "auto" }}>
-            <input type="checkbox" checked={publicView} onChange={(e) => setPublicView(e.target.checked)} />
-            Show this scorecard to students in the app
-          </label>
+      <PageHead title="Scorecard" sub="Share of promises each department kept" />
+      <div className="stack">
+        <div className="card">
+          <Async state={score}>
+            {(rows) => (
+              <table>
+                <thead><tr><th>Department</th><th style={{ width: "40%" }}>Promises kept</th><th>Kept</th><th>Open issues</th></tr></thead>
+                <tbody>
+                  {rows.map((d) => (
+                    <tr key={d.id}>
+                      <td><b>{d.name}</b></td>
+                      <td>{d.kept_pct == null ? <span className="muted">No closed promises</span> : <div className="row" style={{ flexWrap: "nowrap" }}><Bar pct={d.kept_pct} /><b>{d.kept_pct}%</b></div>}</td>
+                      <td>{d.kept} of {d.closed}</td>
+                      <td>{d.open_issues}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Async>
         </div>
 
-        <section className="card table-wrap">
-          <table className="t">
-            <thead>
-              <tr><th>Department</th><th>Promises kept</th><th>Avg fix</th><th>Comes back</th><th>Student OK</th><th>Grade</th></tr>
-            </thead>
-            <tbody>
-              {SCORECARD.map((d, k) => (
-                <tr key={d.name} className={`clickable${k === selected ? " sel" : ""}`} onClick={() => setSelected(k)} aria-selected={k === selected}>
-                  <td className="what"><b>{d.name}</b><span>{d.owner}</span></td>
-                  <td>
-                    <div className="impact">
-                      <Bar value={d.kept / 100} color={keptColor(d.kept)} width={54} />
-                      <b>{d.kept}%</b>
-                    </div>
-                  </td>
-                  <td>{d.fix}</td>
-                  <td style={{ color: d.back >= 20 ? "var(--red)" : undefined, fontWeight: d.back >= 20 ? 600 : 400 }}>{d.back}%</td>
-                  <td>{d.ok}</td>
-                  <td><span className={`grade grade-${d.grade}`}>{d.grade}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        <div className="grid g2">
+          <div className="card">
+            <div className="card-head"><h2>Measured on the labelled test set</h2></div>
+            <Async state={ev}>
+              {(e) => (
+                <table>
+                  <tbody>
+                    <tr><td>Category accuracy</td><td><b>{e.category_accuracy_pct}%</b></td></tr>
+                    <tr><td>Routing accuracy</td><td><b>{e.routing_accuracy_pct}%</b></td></tr>
+                    <tr><td>Merge precision</td><td><b>{e.merge_precision_pct}%</b></td></tr>
+                    <tr><td>Merge recall</td><td><b>{e.merge_recall_pct}%</b></td></tr>
+                    <tr><td colSpan={2} className="sub muted">{e.reports} reports with known answers</td></tr>
+                  </tbody>
+                </table>
+              )}
+            </Async>
+          </div>
 
-        <div className="detail-grid" style={{ gridTemplateColumns: "minmax(0,2fr) minmax(260px,1fr)" }}>
-          <section className="card">
-            <div className="card-head">
-              <h2>{dept.name} · promises kept per month</h2>
-              <span className="right legend"><span><i style={{ background: "#9fd3cf" }} />at or above {KEPT_TARGET}%</span><span><i style={{ background: "#f2a5a5" }} />below</span></span>
-            </div>
-            <div className="card-body">
-              <BarChart
-                ariaLabel={`${dept.name}: promises kept per month, ${SCORE_MONTHS.map((m, i) => `${m} ${dept.months[i]}%`).join(", ")}`}
-                data={SCORE_MONTHS.map((m, i) => ({ label: m, value: dept.months[i], color: dept.months[i] >= KEPT_TARGET ? "#9fd3cf" : "#f2a5a5" }))}
-                max={100} ticks={[0, 50, 100]} unit="%" height={210}
-              />
-            </div>
-          </section>
-          <section className="learned">
-            <div className="eyebrow">What the swarm learned</div>
-            {learned.map((l) => <p key={l}>{l}</p>)}
-          </section>
+          <div className="card">
+            <div className="card-head"><h2>Checked claims</h2></div>
+            <Async state={ver}>
+              {(v) => (
+                <table>
+                  <tbody>
+                    <tr><td>Verified against the data</td><td><b>{v.verified}</b></td></tr>
+                    <tr><td>Contradicted</td><td><b>{v.contradicted}</b></td></tr>
+                    <tr><td>Unverified</td><td><b>{v.unverified}</b></td></tr>
+                  </tbody>
+                </table>
+              )}
+            </Async>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-head"><h2>Routing accuracy by day</h2></div>
+          <Async state={acc}>
+            {(rows) => rows.length === 0 ? <Empty>No routed issues yet</Empty> : (
+              <table>
+                <thead><tr><th>Day</th><th>Routed</th><th>Moved by staff</th><th>Accuracy</th></tr></thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.day}><td>{r.day}</td><td>{r.routed}</td><td>{r.moved}</td><td><b>{r.accuracy_pct ?? 0}%</b></td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Async>
         </div>
       </div>
     </>

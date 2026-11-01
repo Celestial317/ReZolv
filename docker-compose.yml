@@ -13,13 +13,6 @@ services:
     depends_on: [yugabytedb]
     ports: ["8000:8000"]
 
-  app:
-    build:
-      context: ./app
-      args: { API_URL: "http://server:8000" }
-    depends_on: [server]
-    ports: ["3000:3000"]
-
   dashboard:
     build:
       context: ./dashboard

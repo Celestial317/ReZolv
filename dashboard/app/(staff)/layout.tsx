@@ -1,10 +1,5 @@
-import Sidebar from "@/components/Sidebar";
+import Shell from "@/components/Shell";
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="shell">
-      <Sidebar />
-      <div className="main">{children}</div>
-    </div>
-  );
+  return <Shell>{children}</Shell>;
 }

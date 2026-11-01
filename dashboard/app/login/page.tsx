@@ -1,68 +1,53 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Mitraa from "@/components/Mitraa";
+import { session, signIn } from "@/lib/api";
 
-// UI only for now: any non-empty email + password goes to the overview.
-// Wiring: POST /api/auth/login {email, password} -> {token, role}; keep the token in localStorage.
-export default function LoginPage() {
+export default function Login() {
   const router = useRouter();
-  const [email, setEmail] = useState("dean@rezolv.demo");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [show, setShow] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  useEffect(() => { if (session()) router.replace("/"); }, [router]);
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !password) {
-      setError("Enter your staff email and password.");
-      return;
-    }
-    setError("");
     setBusy(true);
-    router.push("/");
+    setError(null);
+    try {
+      await signIn(email.trim(), password);
+      router.replace("/");
+    } catch (err) {
+      setError((err as Error).message);
+      setBusy(false);
+    }
   }
 
   return (
-    <main className="login-page">
-      <div className="login-wrap">
-        <div className="login-hero">
-          <Mitraa pose="wave" mood="happy" size={110} />
-          <div style={{ paddingBottom: 26 }}>
-            <div className="bubble">Welcome back! Let&apos;s fix what students told us today.</div>
-            <h2>ReZolv <span>Staff</span></h2>
-          </div>
+    <div className="login">
+      <div className="art">
+        <div>
+          <div className="figure"><Mitraa pose="wave" mood="happy" /></div>
+          <h2>ReZolv Staff</h2>
         </div>
-
-        <form className="card login-card" onSubmit={submit} noValidate>
-          <h1>Log in</h1>
-          <p className="tag">Fix the cause, not just the complaint.</p>
-          <div className="field">
-            <label htmlFor="email">Email</label>
-            <input id="email" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="field">
-            <div className="row-between">
-              <label htmlFor="password">Password</label>
-              <button type="button" className="link" onClick={() => setError("Ask the Tech Team to reset staff passwords.")}>Reset password</button>
-            </div>
-            <div className="pw">
-              <input id="password" type={show ? "text" : "password"} autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <button type="button" onClick={() => setShow((s) => !s)} aria-pressed={show}>{show ? "Hide" : "Show"}</button>
-            </div>
-          </div>
-          {error && <div className="err" role="alert">{error}</div>}
-          <button className="btn btn-primary btn-block" style={{ padding: "13px 16px", fontSize: 15 }} disabled={busy}>
-            {busy ? "Logging in..." : "Log in"}
-          </button>
-          <p className="muted" style={{ textAlign: "center", fontSize: 13 }}>
-            Students report through the <b style={{ color: "var(--primary)" }}>ReZolv app</b>
-          </p>
-        </form>
-        <p className="faint" style={{ marginTop: 18, fontSize: 12.5 }}>Campus staff only</p>
       </div>
-    </main>
+      <div className="form">
+        <form onSubmit={submit} className="stack">
+          <h1>Sign in</h1>
+          <label className="field"><span>Email</span>
+            <input className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </label>
+          <label className="field"><span>Password</span>
+            <input className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          </label>
+          {error && <div className="notice error">{error}</div>}
+          <button className="btn block" disabled={busy}>{busy ? "Signing in" : "Sign in"}</button>
+        </form>
+      </div>
+    </div>
   );
 }
